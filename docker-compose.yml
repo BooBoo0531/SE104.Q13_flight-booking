@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: flightdb
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASS: postgres
+      DB_NAME: flightdb
+    ports:
+      - "3000:3000"
+    volumes:
+      # 🧠 Mount thư mục backend
+      - ./backend:/usr/src/app
+      # ⚠️ Ghi đè node_modules bằng volume rỗng là đúng
+      - /usr/src/app/node_modules
+    command: npm run start:dev
+volumes:
+  db_data:

@@ -1,0 +1,5 @@
+@import "tailwindcss";
+@config "../tailwind.config.js";  /* <-- sửa từ ./ thành ../ */
+
+:root { color-scheme: light; }
+body { @apply bg-slate-50 text-slate-800; }

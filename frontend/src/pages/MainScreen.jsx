@@ -1,5 +1,6 @@
 // src/pages/MainScreen.jsx
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
@@ -24,6 +25,47 @@ const TicketIcon = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24"
 const DollarSignIcon = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>;
 const Eye = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
 const EyeOff = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path><line x1="2" y1="2" x2="22" y2="22"></line></svg>;
+const ConfirmationModal = ({ message, onConfirm, onCancel }) => {
+  // Khóa cuộn khi mở modal
+  useEffect(() => {
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => (document.body.style.overflow = original);
+  }, []);
+
+  // Đóng khi nhấn Esc
+  useEffect(() => {
+    const handleKey = (e) => e.key === "Escape" && onCancel?.();
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onCancel]);
+
+  const modal = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
+      <div className="relative z-10 w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+        <h3 className="text-lg font-semibold text-gray-800 mb-2">Xác nhận</h3>
+        <p className="text-gray-600 mb-5">{message}</p>
+        <div className="flex gap-3">
+          <button
+            onClick={onConfirm}
+            className="flex-1 rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700"
+          >
+            Xóa
+          </button>
+          <button
+            onClick={onCancel}
+            className="flex-1 rounded-lg bg-gray-200 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-300"
+          >
+            Hủy
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return createPortal(modal, document.body);
+};
 
 // 2. Main Application Screen (after login)
 

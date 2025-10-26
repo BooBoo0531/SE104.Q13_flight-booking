@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   db:
     image: postgres:15
@@ -23,13 +25,23 @@ services:
       DB_USER: postgres
       DB_PASS: postgres
       DB_NAME: flightdb
+      PORT: 3000
     ports:
       - "3000:3000"
     volumes:
-      # 🧠 Mount thư mục backend
       - ./backend:/usr/src/app
-      # ⚠️ Ghi đè node_modules bằng volume rỗng là đúng
       - /usr/src/app/node_modules
     command: npm run start:dev
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile   # Dockerfile prod của FE (Nginx)
+    container_name: admin-frontend
+    ports:
+      - "8081:80"              # http://localhost:8081
+    depends_on:
+      - backend
+
 volumes:
-  db_data:
+  db_data: {}

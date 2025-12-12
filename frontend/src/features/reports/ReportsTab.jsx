@@ -1,0 +1,33 @@
+import React, { useState } from "react";
+import { BuildingIcon, TicketIcon, DollarSignIcon } from "../../components/common/Icons";
+
+const DonutChart = ({ data }) => {
+    const size = 180; const strokeWidth = 25; const radius = (size - strokeWidth) / 2; const circumference = 2 * Math.PI * radius;
+    let accumulatedPercent = 0;
+    return ( <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}> <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="#e6e6e6" strokeWidth={strokeWidth}></circle> {data.map((item, index) => { const percent = item.value / 100 * circumference; const offset = circumference - percent; const rotation = accumulatedPercent * 3.6; accumulatedPercent += item.value; return ( <circle key={index} cx={size/2} cy={size/2} r={radius} fill="none" stroke={item.color} strokeWidth={strokeWidth} strokeDasharray={`${percent} ${offset}`} strokeDashoffset={0} transform={`rotate(${rotation - 90} ${size/2} ${size/2})`} style={{ transition: 'stroke-dasharray 0.3s ease' }} /> ) })} </svg> )
+}
+
+const MonthlyReport = () => (
+    <div className="p-6 space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 bg-white rounded-lg shadow flex items-center gap-4"><div className="p-3 bg-blue-100 rounded-full"><BuildingIcon className="w-6 h-6 text-blue-600"/></div><div><p className="text-sm text-gray-500">Tổng chuyến bay</p><p className="text-2xl font-bold text-gray-800">3</p></div></div>
+            <div className="p-4 bg-white rounded-lg shadow flex items-center gap-4"><div className="p-3 bg-green-100 rounded-full"><TicketIcon className="w-6 h-6 text-green-600"/></div><div><p className="text-sm text-gray-500">Tổng vé</p><p className="text-2xl font-bold text-gray-800">4</p></div></div>
+            <div className="p-4 bg-white rounded-lg shadow flex items-center gap-4"><div className="p-3 bg-yellow-100 rounded-full"><DollarSignIcon className="w-6 h-6 text-yellow-600"/></div><div><p className="text-sm text-gray-500">Tổng doanh thu</p><p className="text-2xl font-bold text-gray-800">17,370,499 ₫</p></div></div>
+        </div>
+        <div><h3 className="text-xl font-semibold text-gray-700 mb-4">Danh sách báo cáo tháng</h3>
+            <div className="bg-white rounded-lg shadow overflow-hidden"><table className="w-full text-left"><thead className="bg-gray-50"><tr className="border-b">{['STT', 'Chuyến bay', 'Số vé', 'Doanh thu', 'Tỷ lệ (%)'].map(h => <th key={h} className="p-3 font-semibold text-gray-600 text-sm">{h}</th>)}</tr></thead><tbody><tr className="border-b"><td className="p-3">1</td><td className="p-3">Sân bay Quốc tế Tân Sơn Nhất - Sân bay Quốc tế Nội Bài</td><td className="p-3">1</td><td className="p-3">10,499 ₫</td><td className="p-3">0.06</td></tr><tr className="border-b"><td className="p-3">2</td><td className="p-3">Sân bay Cam Ranh - Sân bay Cần Thơ</td><td className="p-3">3</td><td className="p-3">17,360,000 ₫</td><td className="p-3">99.94</td></tr><tr><td className="p-3">3</td><td className="p-3">Sân bay Cam Ranh - Sân bay Cát Bi</td><td className="p-3">0</td><td className="p-3">0 ₫</td><td className="p-3">0.00</td></tr></tbody></table></div>
+        </div>
+    </div>
+);
+
+const YearlyReport = () => {
+    const chartData = [ { label: '7', value: 48.77, color: '#3b82f6' }, { label: '8', value: 51.23, color: '#f59e0b' }, ];
+    return ( <div className="p-6 space-y-6"> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <div className="p-4 bg-white rounded-lg shadow flex items-center gap-4"> <div className="p-3 bg-blue-100 rounded-full"><BuildingIcon className="w-6 h-6 text-blue-600"/></div> <div> <p className="text-sm text-gray-500">Tổng chuyến bay</p> <p className="text-2xl font-bold text-gray-800">6</p> </div> </div> <div className="p-4 bg-white rounded-lg shadow flex items-center gap-4"> <div className="p-3 bg-yellow-100 rounded-full"><DollarSignIcon className="w-6 h-6 text-yellow-600"/></div> <div> <p className="text-sm text-gray-500">Tổng doanh thu</p> <p className="text-2xl font-bold text-gray-800">35,615,499 ₫</p> </div> </div> </div> <div className="grid grid-cols-1 lg:grid-cols-3 gap-6"> <div className="lg:col-span-2"> <h3 className="text-xl font-semibold text-gray-700 mb-4">Danh sách báo cáo năm</h3> <div className="bg-white rounded-lg shadow overflow-hidden"> <table className="w-full text-left"> <thead className="bg-gray-50"><tr className="border-b">{['STT', 'Tháng', 'Số chuyến bay', 'Doanh thu', 'Tỷ lệ (%)'].map(h => <th key={h} className="p-3 font-semibold text-gray-600 text-sm">{h}</th>)}</tr></thead> <tbody> <tr className="border-b"><td className="p-3">1</td><td className="p-3">7</td><td className="p-3">3</td><td className="p-3">17,370,499 ₫</td><td className="p-3">48.77</td></tr> <tr><td className="p-3">2</td><td className="p-3">8</td><td className="p-3">3</td><td className="p-3">18,245,000 ₫</td><td className="p-3">51.23</td></tr> </tbody> </table> </div> </div> <div className="p-4 bg-white rounded-lg shadow"> <h3 className="text-xl font-semibold text-gray-700 mb-4 text-center">Biểu đồ tròn doanh thu năm</h3> <div className="flex justify-center items-center h-48"> <DonutChart data={chartData} /> </div> <div className="flex justify-center gap-4 mt-4"> {chartData.map(item => ( <div key={item.label} className="flex items-center gap-2 text-sm"> <span className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></span> <span>Tháng {item.label}</span> </div> ))} </div> </div> </div> </div> );
+}
+
+const ReportsTab = () => {
+    const [reportType, setReportType] = useState('month');
+    return ( <div> <div className="p-4 bg-white border-b flex justify-between items-center"> <div className="flex items-center gap-4"> <select onChange={(e) => setReportType(e.target.value)} value={reportType} className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"> <option value="month">Báo cáo theo tháng</option> <option value="year">Báo cáo theo năm</option> </select> {reportType === 'month' ? ( <input type="month" defaultValue="2024-07" className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"/> ) : ( <input type="number" defaultValue="2024" className="p-2 border rounded-lg w-28 focus:outline-none focus:ring-2 focus:ring-blue-500"/> )} </div> <button className="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 transition">Xuất Excel</button> </div> {reportType === 'month' ? <MonthlyReport /> : <YearlyReport />} </div> );
+};
+
+export default ReportsTab;

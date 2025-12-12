@@ -1,10 +1,11 @@
-// src/App.jsx
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import ProtectedRoute from "./auth/ProtectedRoute";
-import AuthScreen from "./pages/AuthScreen.jsx";
-import MainScreen from "./pages/MainScreen.jsx";
+
+import AuthScreen from "./pages/AuthScreen"; 
+import DashboardScreen from "./pages/DashboardScreen";
+
 import "./index.css";
 
 export default function App() {
@@ -17,10 +18,9 @@ export default function App() {
 
           {/* /: màn hình chính (bảo vệ) */}
           <Route element={<ProtectedRoute />}>
-            <Route path="/" element={<MainScreen />} />
+            <Route path="/" element={<DashboardScreen />} />
           </Route>
 
-          {/* bắt mọi đường dẫn lạ */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

@@ -19,47 +19,33 @@ export default function DashboardScreen() {
   const TABS = ['Chuyến bay', 'Vé máy bay', 'Báo cáo', 'Máy bay', 'Tài khoản và quyền', 'Cài đặt'];
   const [activeTab, setActiveTab] = useState(TABS[0]);
 
-  // --- STATE DỮ LIỆU ---
-  const [flights, setFlights] = useState([
-      { id: 'FL0069', fromAirport: 'Sân bay Cam Ranh', fromCity: 'Khánh Hòa', toAirport: 'Sân bay Cần Thơ', toCity: 'Cần Thơ', time: '12:00-13:40', seatsEmpty: 60, seatsTaken: 0, planeId: 'PE0003', date: '2024-08-02', hour: '12', minute: '00', duration: '100', price: '1500000', businessSeats: 10, economySeats: 50, intermediateAirports: [] },
-      { id: 'FL0070', fromAirport: 'Sân bay Cam Ranh', fromCity: 'Khánh Hòa', toAirport: 'Sân bay Cần Thơ', toCity: 'Cần Thơ', time: '12:00-13:40', seatsEmpty: 12, seatsTaken: 0, planeId: 'PE0004', date: '2024-08-03', hour: '14', minute: '30', duration: '100', price: '1600000', businessSeats: 0, economySeats: 12, intermediateAirports: [] },
+  // --- STATE DỮ LIỆU (ĐÃ XÓA DỮ LIỆU MẪU - CHỜ API) ---
+  const [flights, setFlights] = useState([]); // Rỗng
+  const [tickets, setTickets] = useState([]); // Rỗng
+  const [airplanes, setAirplanes] = useState([]); // Rỗng
+  const [users, setUsers] = useState([]); // Rỗng
+  const [airports, setAirports] = useState([]); // Rỗng
+
+  // Những cấu hình tĩnh này có thể giữ lại hoặc cũng đưa về rỗng tùy bạn
+  const [ticketClasses, setTicketClasses] = useState([
+      {id: 1, name: 'Phổ thông', percentage: 100},
+      {id: 2, name: 'Thương gia', percentage: 105},
   ]);
-  const [tickets, setTickets] = useState([]);
-  const [airplanes, setAirplanes] = useState([
-      { id: 'PE0001', name: 'Phi cơ 1', economySeats: 12, businessSeats: 6, totalSeats: 18 },
-      { id: 'PE0002', name: 'Phi cơ 2', economySeats: 30, businessSeats: 6, totalSeats: 36 },
-      { id: 'PE0003', name: 'Phi cơ 3', economySeats: 50, businessSeats: 10, totalSeats: 60 },
-      { id: 'PE0004', name: 'Máy bay M', economySeats: 12, businessSeats: 0, totalSeats: 12 },
-  ]);
-  const [users, setUsers] = useState([
-      { id: 1, name: 'Huỳnh Mai Cao Nhân', date: '01-01-2023', role: 'Siêu quản trị', email: 'nhan@email.com', phone: '123456' },
-      { id: 2, name: 'Huỳnh Mai Cao Nhân', date: '01-01-2023', role: 'Quản trị', email: 'nhan2@email.com', phone: '123456'  },
-      { id: 3, name: 'Huỳnh Mai Cao Nhân', date: '01-01-2023', role: 'Ban giám đốc', email: 'nhan3@email.com', phone: '123456'  },
-      { id: 4, name: 'Huỳnh Mai Cao Nhân', date: '01-01-2023', role: 'Nhân viên', email: 'nhan4@email.com', phone: '123456'  },
-  ]);
+  
+  const [rules, setRules] = useState({
+      minFlightTime: 30, maxStopovers: 2, minStopTime: 10, maxStopTime: 20, latestBookingTime: 1, latestCancelTime: 1,
+  });
+
   const [permissions, setPermissions] = useState({
       'Siêu quản trị': { ChuyenBay: true, VeChuyenBay: true, BaoCao: true, MayBay: true, TaiKhoan: true, CaiDat: true },
       'Quản trị': { ChuyenBay: false, VeChuyenBay: false, BaoCao: false, MayBay: false, TaiKhoan: true, CaiDat: false },
       'Ban giám đốc': { ChuyenBay: true, VeChuyenBay: false, BaoCao: true, MayBay: false, TaiKhoan: false, CaiDat: true },
       'Nhân viên': { ChuyenBay: true, VeChuyenBay: true, BaoCao: false, MayBay: false, TaiKhoan: false, CaiDat: false },
   });
-  const [flightToBook, setFlightToBook] = useState(null);
-  const [airports, setAirports] = useState([
-      {id: 1, name: 'Sân bay Quốc tế TSN', city: 'Hồ Chí Minh', country: 'Việt Nam'},
-      {id: 2, name: 'Sân bay Quốc tế Nội Bài', city: 'Hà Nội', country: 'Việt Nam'},
-      {id: 3, name: 'Sân bay Quốc tế Đà Nẵng', city: 'Đà Nẵng', country: 'Việt Nam'},
-      {id: 4, name: 'Sân bay Cam Ranh', city: 'Khánh Hòa', country: 'Việt Nam'},
-      {id: 5, name: 'Sân bay Phú Quốc', city: 'Phú Quốc', country: 'Việt Nam'},
-  ]);
-  const [ticketClasses, setTicketClasses] = useState([
-      {id: 1, name: 'Phổ thông', percentage: 100},
-      {id: 2, name: 'Thương gia', percentage: 105},
-  ]);
-  const [rules, setRules] = useState({
-      minFlightTime: 30, maxStopovers: 2, minStopTime: 10, maxStopTime: 20, latestBookingTime: 1, latestCancelTime: 1,
-  });
 
-  // --- HANDLERS ---
+  const [flightToBook, setFlightToBook] = useState(null);
+
+  // --- HANDLERS (Giữ nguyên logic khung sườn, sau này sẽ thêm API call vào đây) ---
   const calculateFlightTime = (hourStr, minuteStr, durationStr) => {
       const hour = parseInt(hourStr, 10), minute = parseInt(minuteStr, 10), duration = parseInt(durationStr, 10);
       if (isNaN(hour) || isNaN(minute) || isNaN(duration)) return 'N/A';

@@ -12,34 +12,54 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateFlightDto = void 0;
 const class_validator_1 = require("class-validator");
 class CreateFlightDto {
-    flightNumber;
-    origin;
-    destination;
-    departureTime;
-    seats;
+    flightCode;
+    price;
+    totalSeats;
+    startTime;
+    endTime;
+    planeId;
+    fromAirportId;
+    toAirportId;
 }
 exports.CreateFlightDto = CreateFlightDto;
 __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
-], CreateFlightDto.prototype, "flightNumber", void 0);
+], CreateFlightDto.prototype, "flightCode", void 0);
 __decorate([
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsNotEmpty)(),
-    __metadata("design:type", String)
-], CreateFlightDto.prototype, "origin", void 0);
-__decorate([
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsNotEmpty)(),
-    __metadata("design:type", String)
-], CreateFlightDto.prototype, "destination", void 0);
-__decorate([
-    (0, class_validator_1.IsDateString)(),
-    __metadata("design:type", String)
-], CreateFlightDto.prototype, "departureTime", void 0);
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], CreateFlightDto.prototype, "price", void 0);
 __decorate([
     (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(1),
     __metadata("design:type", Number)
-], CreateFlightDto.prototype, "seats", void 0);
+], CreateFlightDto.prototype, "totalSeats", void 0);
+__decorate([
+    (0, class_validator_1.IsDateString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateFlightDto.prototype, "startTime", void 0);
+__decorate([
+    (0, class_validator_1.IsDateString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateFlightDto.prototype, "endTime", void 0);
+__decorate([
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", Number)
+], CreateFlightDto.prototype, "planeId", void 0);
+__decorate([
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", Number)
+], CreateFlightDto.prototype, "fromAirportId", void 0);
+__decorate([
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", Number)
+], CreateFlightDto.prototype, "toAirportId", void 0);
 //# sourceMappingURL=create-flight.dto.js.map

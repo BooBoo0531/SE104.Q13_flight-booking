@@ -1,7 +1,10 @@
 export declare class CreateFlightDto {
-    flightNumber: string;
-    origin: string;
-    destination: string;
-    departureTime: string;
-    seats: number;
+    flightCode: string;
+    price: number;
+    totalSeats: number;
+    startTime: string;
+    endTime: string;
+    planeId: number;
+    fromAirportId: number;
+    toAirportId: number;
 }

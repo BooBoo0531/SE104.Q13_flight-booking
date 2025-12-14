@@ -35,17 +35,45 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppDataSource = void 0;
 const typeorm_1 = require("typeorm");
-const flight_entity_1 = require("../modules/flights/entities/flight.entity");
 const dotenv = __importStar(require("dotenv"));
+const flight_entity_1 = require("../modules/flights/entities/flight.entity");
+const user_entity_1 = require("../modules/users/entities/user.entity");
+const airport_entity_1 = require("../modules/airports/entities/airport.entity");
+const airplane_entity_1 = require("../modules/airplanes/entities/airplane.entity");
+const ticket_entity_1 = require("../modules/tickets/entities/ticket.entity");
+const ticket_class_entity_1 = require("../modules/ticket-classes/entities/ticket-class.entity");
+const booking_entity_1 = require("../modules/bookings/entities/booking.entity");
+const setting_entity_1 = require("../modules/settings/entities/setting.entity");
+const intermediate_airport_entity_1 = require("../modules/intermediate-airports/entities/intermediate-airport.entity");
+const seat_entity_1 = require("../modules/seats/entities/seat.entity");
+const flight_ticket_class_entity_1 = require("../modules/flight-ticket-classes/entities/flight-ticket-class.entity");
 dotenv.config();
 exports.AppDataSource = new typeorm_1.DataSource({
     type: 'postgres',
-    host: process.env.DB_HOST || 'db',
-    port: parseInt(process.env.DB_PORT || '5432'),
-    username: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASS || 'postgres',
-    database: process.env.DB_NAME || 'flightdb',
-    entities: [flight_entity_1.Flight],
+    url: process.env.DATABASE_URL,
+    ssl: true,
+    extra: {
+        ssl: {
+            rejectUnauthorized: false,
+        },
+    },
+    dropSchema: true,
     synchronize: true,
+    logging: false,
+    entities: [
+        flight_entity_1.Flight,
+        user_entity_1.User,
+        airport_entity_1.Airport,
+        airplane_entity_1.Airplane,
+        ticket_entity_1.Ticket,
+        ticket_class_entity_1.TicketClass,
+        booking_entity_1.Booking,
+        setting_entity_1.Setting,
+        intermediate_airport_entity_1.IntermediateAirport,
+        seat_entity_1.Seat,
+        flight_ticket_class_entity_1.FlightTicketClass
+    ],
+    migrations: [],
+    subscribers: [],
 });
 //# sourceMappingURL=data-source.js.map

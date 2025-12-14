@@ -15,28 +15,60 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.FlightsService = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("typeorm");
-const flight_entity_1 = require("./entities/flight.entity");
 const typeorm_2 = require("@nestjs/typeorm");
+const flight_entity_1 = require("./entities/flight.entity");
+const setting_entity_1 = require("../settings/entities/setting.entity");
 let FlightsService = class FlightsService {
     flightRepo;
-    constructor(flightRepo) {
+    settingRepo;
+    constructor(flightRepo, settingRepo) {
         this.flightRepo = flightRepo;
+        this.settingRepo = settingRepo;
     }
-    create(dto) {
-        const f = this.flightRepo.create(dto);
-        return this.flightRepo.save(f);
+    async create(dto) {
+        const input = dto;
+        const settings = await this.settingRepo.findOne({ where: { id: 1 } });
+        const minFlightTime = settings ? settings.minFlightTime : 30;
+        const startTime = new Date(input.startTime);
+        const endTime = new Date(input.endTime);
+        if (endTime.getTime() <= startTime.getTime()) {
+            throw new common_1.BadRequestException('Lỗi: Thời gian hạ cánh phải sau thời gian cất cánh!');
+        }
+        const duration = (endTime.getTime() - startTime.getTime()) / 60000;
+        if (duration < minFlightTime) {
+            throw new common_1.BadRequestException(`Vi phạm quy định: Thời gian bay quá ngắn (${Math.floor(duration)} phút). Tối thiểu phải là ${minFlightTime} phút.`);
+        }
+        const newFlight = this.flightRepo.create({
+            ...input,
+            duration: duration,
+            availableSeats: input.totalSeats,
+            plane: input.planeId ? { id: input.planeId } : undefined,
+            fromAirport: input.fromAirportId ? { id: input.fromAirportId } : undefined,
+            toAirport: input.toAirportId ? { id: input.toAirportId } : undefined,
+        });
+        return await this.flightRepo.save(newFlight);
     }
-    findAll() {
-        return this.flightRepo.find();
+    async findAll() {
+        return await this.flightRepo.find({
+            relations: ['plane', 'fromAirport', 'toAirport'],
+            order: {
+                startTime: 'ASC',
+            },
+        });
     }
-    findOne(id) {
-        return this.flightRepo.findOneBy({ id });
+    async findOne(id) {
+        return await this.flightRepo.findOne({
+            where: { id },
+            relations: ['plane', 'fromAirport', 'toAirport', 'tickets'],
+        });
     }
 };
 exports.FlightsService = FlightsService;
 exports.FlightsService = FlightsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_2.InjectRepository)(flight_entity_1.Flight)),
-    __metadata("design:paramtypes", [typeorm_1.Repository])
+    __param(1, (0, typeorm_2.InjectRepository)(setting_entity_1.Setting)),
+    __metadata("design:paramtypes", [typeorm_1.Repository,
+        typeorm_1.Repository])
 ], FlightsService);
 //# sourceMappingURL=flights.service.js.map

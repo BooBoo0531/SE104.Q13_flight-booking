@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 const data_source_1 = require("./config/data-source");
 const flight_entity_1 = require("./modules/flights/entities/flight.entity");
@@ -12,6 +45,7 @@ const setting_entity_1 = require("./modules/settings/entities/setting.entity");
 const seat_entity_1 = require("./modules/seats/entities/seat.entity");
 const intermediate_airport_entity_1 = require("./modules/intermediate-airports/entities/intermediate-airport.entity");
 const flight_ticket_class_entity_1 = require("./modules/flight-ticket-classes/entities/flight-ticket-class.entity");
+const bcrypt = __importStar(require("bcryptjs"));
 const hoVN = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Huỳnh', 'Hoàng', 'Phan', 'Vũ', 'Võ', 'Đặng', 'Bùi', 'Đỗ', 'Hồ', 'Ngô', 'Dương', 'Lý'];
 const demVN = ['Văn', 'Thị', 'Minh', 'Thanh', 'Ngọc', 'Quốc', 'Tuấn', 'Hải', 'Đức', 'Xuân', 'Thu', 'Phương', 'Hữu', 'Gia', 'Khánh'];
 const tenVN = ['Anh', 'Bình', 'Châu', 'Dương', 'Em', 'Hùng', 'Huy', 'Khánh', 'Lan', 'Long', 'Mai', 'Nam', 'Nhi', 'Phúc', 'Quân', 'Sơn', 'Thảo', 'Trang', 'Tú', 'Uyên', 'Việt', 'Yến', 'Tâm', 'Thắng', 'Tài'];
@@ -30,20 +64,20 @@ const generateEmail = (name, domain) => {
     const cleanName = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/ /g, "");
     return `${cleanName}${getRandomInt(100, 9999)}@${domain}`;
 };
+const hashPassword = async (plain) => {
+    const saltRounds = 10;
+    return await bcrypt.hash(plain, saltRounds);
+};
 async function bootstrap() {
+    console.log('🚀 Bắt đầu seed database...');
     try {
-        console.log('🌱 Đang kết nối Database...');
         if (!data_source_1.AppDataSource.isInitialized)
             await data_source_1.AppDataSource.initialize();
-        console.log('🧹 Đang dọn dẹp dữ liệu cũ (Full 11 bảng)...');
         const queryRunner = data_source_1.AppDataSource.createQueryRunner();
         const tables = [
-            'ticket', 'booking',
-            'CT_HANGVE', 'TRUNGGIAN',
-            'flight',
-            'GHE', 'airplane',
-            'airport', 'ticket_class',
-            'user', 'setting'
+            'VE', 'PHIEUDATCHO', 'CT_HANGVE', 'TRUNGGIAN',
+            'CHUYENBAY', 'GHE', 'MAYBAY', 'SANBAY', 'HANGVE',
+            'NGUOIDUNG', 'THAMSO'
         ];
         for (const table of tables) {
             await queryRunner.query(`TRUNCATE TABLE "${table}" CASCADE`);
@@ -59,23 +93,39 @@ async function bootstrap() {
         const seatRepo = data_source_1.AppDataSource.getRepository(seat_entity_1.Seat);
         const interRepo = data_source_1.AppDataSource.getRepository(intermediate_airport_entity_1.IntermediateAirport);
         const flightDetailRepo = data_source_1.AppDataSource.getRepository(flight_ticket_class_entity_1.FlightTicketClass);
-        console.log('⚙️ Thiết lập Quy định...');
-        const rules = await settingRepo.save({
+        await settingRepo.save({
             minFlightTime: 30, maxIntermediateAirports: 2, minStopoverTime: 10, maxStopoverTime: 20, latestBookingTime: 12, latestCancellationTime: 24
         });
-        console.log('🎫 Tạo Hạng vé...');
         const ecoClass = await classRepo.save({ name: 'Phổ thông', priceRatio: 1.0 });
         const bizClass = await classRepo.save({ name: 'Thương gia', priceRatio: 1.5 });
-        console.log('👥 Tạo User...');
-        await userRepo.save({ name: 'Super Admin', email: 'admin@flight.com', password: '123', role: 'admin' });
+        console.log('👥 Tạo Users...');
+        const defaultPassword = await hashPassword('flight123456');
+        await userRepo.save({
+            name: 'Super Admin',
+            email: 'admin@flight.com',
+            password: defaultPassword,
+            role: 'admin'
+        });
         for (let i = 0; i < 10; i++) {
             const name = generateName();
-            await userRepo.save({ name: name, email: generateEmail(name, 'flightadmin.com'), password: '123', role: Math.random() > 0.7 ? 'manager' : 'staff', phone: `09${getRandomInt(10000000, 99999999)}` });
+            await userRepo.save({
+                name,
+                email: generateEmail(name, 'flightadmin.com'),
+                password: defaultPassword,
+                role: Math.random() > 0.7 ? 'manager' : 'staff',
+                phone: `09${getRandomInt(10000000, 99999999)}`
+            });
         }
         const customers = [];
         for (let i = 0; i < 50; i++) {
             const name = generateName();
-            const user = await userRepo.save({ name: name, email: generateEmail(name, getRandomItem(['gmail.com', 'yahoo.com'])), password: '123', role: 'user', phone: `03${getRandomInt(10000000, 99999999)}` });
+            const user = await userRepo.save({
+                name,
+                email: generateEmail(name, getRandomItem(['gmail.com', 'yahoo.com'])),
+                password: defaultPassword,
+                role: 'user',
+                phone: `03${getRandomInt(10000000, 99999999)}`
+            });
             customers.push(user);
         }
         console.log('🛫 Tạo Sân bay...');
@@ -91,7 +141,7 @@ async function bootstrap() {
             { name: 'Vinh', city: 'Nghệ An', code: 'VII', country: 'Việt Nam' },
             { name: 'Phù Cát', city: 'Bình Định', code: 'UIH', country: 'Việt Nam' },
         ]);
-        console.log('✈️ Tạo Đội bay & Ghế vật lý...');
+        console.log('✈️ Tạo Máy bay & Ghế...');
         const planesData = [
             { name: 'Boeing 787-9', seats: 200, bizRows: 4, seatsPerRow: 6 },
             { name: 'Airbus A321neo', seats: 150, bizRows: 2, seatsPerRow: 6 },
@@ -127,7 +177,9 @@ async function bootstrap() {
             }
             await seatRepo.save(seatsToSave);
         }
-        console.log('🚀 Đang tạo 80 Chuyến bay (Kèm Trung gian & Chi tiết vé)...');
+        console.log('🚀 Tạo Chuyến bay & Bán vé...');
+        const usedFlightCodes = new Set();
+        let globalBookingCounter = 0;
         for (let i = 1; i <= 80; i++) {
             let from = getRandomItem(airports);
             let to = getRandomItem(airports);
@@ -144,7 +196,7 @@ async function bootstrap() {
                 startTime = addDays(new Date(), daysFromNow);
                 startTime.setHours(getRandomInt(6, 23), getRandomItem([0, 15, 30, 45]), 0);
             }
-            const duration = getRandomInt(rules.minFlightTime, 180);
+            const duration = getRandomInt(30, 180);
             const endTime = new Date(startTime.getTime() + duration * 60000);
             const now = new Date();
             let flightStatus = 'scheduled';
@@ -166,82 +218,60 @@ async function bootstrap() {
                         flightStatus = 'scheduled';
                 }
             }
+            let uniqueCode = '';
+            do {
+                uniqueCode = `VN${getRandomInt(1000, 9999)}`;
+            } while (usedFlightCodes.has(uniqueCode));
+            usedFlightCodes.add(uniqueCode);
             const flight = await flightRepo.save({
-                flightCode: `VN${getRandomInt(1000, 9999)}`,
+                flightCode: uniqueCode,
                 fromAirport: from, toAirport: to, startTime, endTime, duration,
                 price: getRandomInt(6, 30) * 100000,
                 totalSeats: plane.totalSeats, availableSeats: plane.totalSeats,
                 status: flightStatus, plane: plane,
             });
-            if (Math.random() > 0.7) {
+            if (Math.random() > 0.8) {
                 let interAirport = getRandomItem(airports);
                 while (interAirport.code === from.code || interAirport.code === to.code)
                     interAirport = getRandomItem(airports);
                 await interRepo.save({
-                    flight: flight,
-                    airport: interAirport,
-                    duration: getRandomInt(20, 45),
-                    note: 'Dừng nạp nhiên liệu & đón khách'
+                    flight: flight, airport: interAirport, duration: getRandomInt(20, 45), note: 'Dừng kỹ thuật'
                 });
             }
-            await flightDetailRepo.save({
-                flight: flight,
-                ticketClass: bizClass,
-                totalSeats: plane.businessSeats,
-                soldSeats: 0,
-                price: Math.floor(flight.price * bizClass.priceRatio)
-            });
-            await flightDetailRepo.save({
-                flight: flight,
-                ticketClass: ecoClass,
-                totalSeats: plane.economySeats,
-                soldSeats: 0,
-                price: Math.floor(flight.price * ecoClass.priceRatio)
-            });
+            await flightDetailRepo.save([
+                { flight: flight, ticketClass: bizClass, totalSeats: plane.businessSeats, soldSeats: 0, price: Math.floor(flight.price * bizClass.priceRatio) },
+                { flight: flight, ticketClass: ecoClass, totalSeats: plane.economySeats, soldSeats: 0, price: Math.floor(flight.price * ecoClass.priceRatio) }
+            ]);
             if (flightStatus !== 'cancelled') {
-                const fillRate = getRandomInt(30, 95) / 100;
+                const fillRate = getRandomInt(30, 90) / 100;
                 const seatsToSell = Math.floor(plane.totalSeats * fillRate);
                 let seatsSoldSoFar = 0;
                 let bizSold = 0;
                 let ecoSold = 0;
+                const bookingsBatch = [];
+                const ticketsBatch = [];
                 while (seatsSoldSoFar < seatsToSell) {
                     const bookingUser = getRandomItem(customers);
-                    const ticketsInThisBooking = getRandomInt(1, 4);
-                    const latestValidTime = new Date(startTime.getTime() - (rules.latestBookingTime + 1) * 3600000);
-                    const earliestTime = addDays(startTime, -15);
-                    let bookingDate = earliestTime;
-                    if (latestValidTime > earliestTime) {
-                        const timeSpan = latestValidTime.getTime() - earliestTime.getTime();
-                        bookingDate = new Date(earliestTime.getTime() + Math.random() * timeSpan);
-                    }
-                    if (bookingDate > now)
-                        bookingDate = now;
-                    let bookingStatus = 'confirmed';
-                    if (Math.random() > 0.95)
-                        bookingStatus = 'cancelled';
+                    const ticketsInThisBooking = Math.min(getRandomInt(1, 4), seatsToSell - seatsSoldSoFar);
+                    globalBookingCounter++;
+                    const bookingCode = `BK${i}${globalBookingCounter}${getRandomInt(1000, 9999)}`;
+                    const bookingStatus = (Math.random() > 0.95) ? 'cancelled' : 'confirmed';
+                    const bookingDate = new Date();
                     let bookingTotal = 0;
-                    const booking = await bookingRepo.save({
-                        bookingCode: `BK${Date.now().toString().slice(-6)}${getRandomInt(10, 99)}`,
-                        totalPrice: 0, status: bookingStatus, bookingDate: bookingDate, user: bookingUser
-                    });
+                    const tempTickets = [];
                     for (let t = 0; t < ticketsInThisBooking; t++) {
                         if (seatsSoldSoFar >= seatsToSell)
                             break;
-                        let isBiz = false;
-                        if (plane.businessSeats > bizSold) {
-                            isBiz = Math.random() > 0.9;
-                        }
-                        if (plane.economySeats <= ecoSold && plane.businessSeats > bizSold)
-                            isBiz = true;
+                        let isBiz = (plane.businessSeats > bizSold) ? Math.random() > 0.9 : false;
                         const selectedClass = isBiz ? bizClass : ecoClass;
                         const finalPrice = Math.floor(flight.price * selectedClass.priceRatio);
-                        await ticketRepo.save({
-                            ticketId: `TK${booking.id}${t}`,
-                            seat: `${getRandomInt(1, 30)}${getRandomItem(['A', 'B', 'C', 'D', 'E'])}`,
+                        tempTickets.push({
+                            ticketId: `TK${bookingCode}${t}${getRandomInt(100, 999)}`,
+                            seat: `${getRandomInt(1, 30)}${getRandomItem(['A', 'B', 'C', 'D'])}`,
                             seatClass: selectedClass.name,
                             price: finalPrice,
                             passengerName: (t === 0) ? bookingUser.name : generateName(),
-                            flight: flight, booking: booking
+                            bookingCode: bookingCode
                         });
                         bookingTotal += finalPrice;
                         seatsSoldSoFar++;
@@ -250,8 +280,38 @@ async function bootstrap() {
                         else
                             ecoSold++;
                     }
-                    booking.totalPrice = bookingTotal;
-                    await bookingRepo.save(booking);
+                    bookingsBatch.push({
+                        bookingCode: bookingCode,
+                        totalPrice: bookingTotal,
+                        status: bookingStatus,
+                        bookingDate: bookingDate,
+                        user: bookingUser,
+                        flight: flight,
+                        tickets: tempTickets
+                    });
+                }
+                if (bookingsBatch.length > 0) {
+                    for (const bookingData of bookingsBatch) {
+                        const tickets = bookingData.tickets;
+                        delete bookingData.tickets;
+                        const savedBooking = await bookingRepo.save(bookingData);
+                        const ticketsToInsert = tickets.map((t) => ({
+                            ticketId: t.ticketId,
+                            seat: t.seat,
+                            seatClass: t.seatClass,
+                            price: t.price,
+                            passengerName: t.passengerName,
+                            flight: flight,
+                            booking: savedBooking
+                        }));
+                        ticketsBatch.push(...ticketsToInsert);
+                    }
+                    if (ticketsBatch.length > 0) {
+                        const chunkSize = 100;
+                        for (let k = 0; k < ticketsBatch.length; k += chunkSize) {
+                            await ticketRepo.save(ticketsBatch.slice(k, k + chunkSize));
+                        }
+                    }
                 }
                 flight.availableSeats = Math.floor(flight.totalSeats - seatsSoldSoFar);
                 await flightRepo.save(flight);
@@ -259,7 +319,7 @@ async function bootstrap() {
                 await flightDetailRepo.update({ flight: { id: flight.id }, ticketClass: { id: ecoClass.id } }, { soldSeats: ecoSold });
             }
         }
-        console.log('✅✅✅ XONG! Full 11 Bảng - Dữ liệu hoàn hảo.');
+        console.log('✅ SEED DONE - Hệ thống đã sẵn sàng!');
     }
     catch (err) {
         console.error('❌ Lỗi:', err);

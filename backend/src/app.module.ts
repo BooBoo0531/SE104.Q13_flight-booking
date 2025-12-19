@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { FlightsModule } from './modules/flights/flights.module';
+import { AuthModule } from './auth/auth.module';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
@@ -22,6 +23,7 @@ dotenv.config();
       autoLoadEntities: true,
     }),
     FlightsModule,
+    AuthModule,
   ],
 })
 export class AppModule {}

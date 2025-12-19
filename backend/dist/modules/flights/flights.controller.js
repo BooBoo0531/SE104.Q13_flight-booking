@@ -16,43 +16,60 @@ exports.FlightsController = void 0;
 const common_1 = require("@nestjs/common");
 const flights_service_1 = require("./flights.service");
 const create_flight_dto_1 = require("./dto/create-flight.dto");
+const jwt_auth_guard_1 = require("../../auth/jwt-auth.guard");
+const roles_decorator_1 = require("../../auth/roles.decorator");
+const roles_guard_1 = require("../../auth/roles.guard");
 let FlightsController = class FlightsController {
     svc;
     constructor(svc) {
         this.svc = svc;
     }
-    create(dto) {
-        return this.svc.create(dto);
-    }
     list() {
         return this.svc.findAll();
+    }
+    adminRoute() {
+        return 'Chỉ admin & manager';
     }
     get(id) {
         return this.svc.findOne(Number(id));
     }
+    create(dto) {
+        return this.svc.create(dto);
+    }
 };
 exports.FlightsController = FlightsController;
 __decorate([
-    (0, common_1.Post)(),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_flight_dto_1.CreateFlightDto]),
-    __metadata("design:returntype", void 0)
-], FlightsController.prototype, "create", null);
-__decorate([
+    (0, roles_decorator_1.Roles)('admin', 'staff', 'user'),
     (0, common_1.Get)(),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], FlightsController.prototype, "list", null);
 __decorate([
+    (0, roles_decorator_1.Roles)('admin', 'manager'),
+    (0, common_1.Get)('admin-only'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], FlightsController.prototype, "adminRoute", null);
+__decorate([
+    (0, roles_decorator_1.Roles)('admin', 'staff', 'user'),
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], FlightsController.prototype, "get", null);
+__decorate([
+    (0, roles_decorator_1.Roles)('admin', 'manager'),
+    (0, common_1.Post)(),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [create_flight_dto_1.CreateFlightDto]),
+    __metadata("design:returntype", void 0)
+], FlightsController.prototype, "create", null);
 exports.FlightsController = FlightsController = __decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, common_1.Controller)('flights'),
     __metadata("design:paramtypes", [flights_service_1.FlightsService])
 ], FlightsController);

@@ -11,6 +11,8 @@ import { Seat } from './modules/seats/entities/seat.entity';
 import { IntermediateAirport } from './modules/intermediate-airports/entities/intermediate-airport.entity';
 import { FlightTicketClass } from './modules/flight-ticket-classes/entities/flight-ticket-class.entity';
 
+import * as bcrypt from 'bcryptjs';
+
 // --- BỘ SINH DỮ LIỆU ---
 const hoVN = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Huỳnh', 'Hoàng', 'Phan', 'Vũ', 'Võ', 'Đặng', 'Bùi', 'Đỗ', 'Hồ', 'Ngô', 'Dương', 'Lý'];
 const demVN = ['Văn', 'Thị', 'Minh', 'Thanh', 'Ngọc', 'Quốc', 'Tuấn', 'Hải', 'Đức', 'Xuân', 'Thu', 'Phương', 'Hữu', 'Gia', 'Khánh'];
@@ -33,23 +35,23 @@ const generateEmail = (name: string, domain: string) => {
   return `${cleanName}${getRandomInt(100, 9999)}@${domain}`;
 };
 
+const hashPassword = async (plain: string) => {
+  const saltRounds = 10;
+  return await bcrypt.hash(plain, saltRounds);
+};
+
 async function bootstrap() {
+  console.log('🚀 Bắt đầu seed database...');
   try {
-    console.log('🌱 Đang kết nối Database...');
     if (!AppDataSource.isInitialized) await AppDataSource.initialize();
-    
-    console.log('🧹 Đang dọn dẹp dữ liệu cũ...');
+
     const queryRunner = AppDataSource.createQueryRunner();
-    
-    // Danh sách bảng (Tên Tiếng Việt)
     const tables = [
       'VE', 'PHIEUDATCHO', 'CT_HANGVE', 'TRUNGGIAN', 
       'CHUYENBAY', 'GHE', 'MAYBAY', 'SANBAY', 'HANGVE', 
       'NGUOIDUNG', 'THAMSO'
     ];
-    
     for (const table of tables) {
-      // Thêm truy vấn check bảng tồn tại để tránh lỗi lần đầu chạy
       await queryRunner.query(`TRUNCATE TABLE "${table}" CASCADE`);
     }
 
@@ -67,29 +69,46 @@ async function bootstrap() {
     const flightDetailRepo = AppDataSource.getRepository(FlightTicketClass);
 
     // 1. TẠO THAM SỐ
-    console.log('⚙️ Thiết lập Quy định...');
-    const rules = await settingRepo.save({
+    await settingRepo.save({
       minFlightTime: 30, maxIntermediateAirports: 2, minStopoverTime: 10, maxStopoverTime: 20, latestBookingTime: 12, latestCancellationTime: 24
     });
 
     // 2. TẠO HẠNG VÉ
-    console.log('🎫 Tạo Hạng vé...');
     const ecoClass = await classRepo.save({ name: 'Phổ thông', priceRatio: 1.0 });
     const bizClass = await classRepo.save({ name: 'Thương gia', priceRatio: 1.5 });
 
     // 3. TẠO USER
-    console.log('👥 Tạo User...');
-    await userRepo.save({ name: 'Super Admin', email: 'admin@flight.com', password: '123', role: 'admin' });
+    console.log('👥 Tạo Users...');
+    const defaultPassword = await hashPassword('flight123456');
+
+    await userRepo.save({
+      name: 'Super Admin',
+      email: 'admin@flight.com',
+      password: defaultPassword,
+      role: 'admin'
+    });
     
     for (let i = 0; i < 10; i++) {
       const name = generateName();
-      await userRepo.save({ name: name, email: generateEmail(name, 'flightadmin.com'), password: '123', role: Math.random() > 0.7 ? 'manager' : 'staff', phone: `09${getRandomInt(10000000, 99999999)}` });
+      await userRepo.save({
+        name,
+        email: generateEmail(name, 'flightadmin.com'),
+        password: defaultPassword,
+        role: Math.random() > 0.7 ? 'manager' : 'staff',
+        phone: `09${getRandomInt(10000000, 99999999)}`
+      });
     }
-    
+
     const customers: User[] = [];
     for (let i = 0; i < 50; i++) {
       const name = generateName();
-      const user = await userRepo.save({ name: name, email: generateEmail(name, getRandomItem(['gmail.com', 'yahoo.com'])), password: '123', role: 'user', phone: `03${getRandomInt(10000000, 99999999)}` });
+      const user = await userRepo.save({
+        name,
+        email: generateEmail(name, getRandomItem(['gmail.com', 'yahoo.com'])),
+        password: defaultPassword,
+        role: 'user',
+        phone: `03${getRandomInt(10000000, 99999999)}`
+      });
       customers.push(user);
     }
 
@@ -108,8 +127,8 @@ async function bootstrap() {
       { name: 'Phù Cát', city: 'Bình Định', code: 'UIH', country: 'Việt Nam' },
     ]);
 
-    // 5. TẠO MÁY BAY & GHẾ (Dùng Batch Save để tránh lỗi Connection)
-    console.log('✈️ Tạo Đội bay & Ghế vật lý...');
+    // 5. TẠO MÁY BAY & GHẾ
+    console.log('✈️ Tạo Máy bay & Ghế...');
     const planesData = [
       { name: 'Boeing 787-9', seats: 200, bizRows: 4, seatsPerRow: 6 }, 
       { name: 'Airbus A321neo', seats: 150, bizRows: 2, seatsPerRow: 6 },
@@ -119,7 +138,6 @@ async function bootstrap() {
     const planes: Airplane[] = [];
     for (let i = 1; i <= 15; i++) {
       const type = getRandomItem(planesData);
-      
       const totalRows = Math.ceil(type.seats / type.seatsPerRow);
       const bizSeatsCount = type.bizRows * type.seatsPerRow;
       const ecoSeatsCount = type.seats - bizSeatsCount;
@@ -133,7 +151,6 @@ async function bootstrap() {
       });
       planes.push(plane);
 
-      // 👉 BATCH INSERT: Gom ghế lại lưu 1 lần
       const seatsToSave: any[] = [];
       const colLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'K'];
       
@@ -151,10 +168,10 @@ async function bootstrap() {
       await seatRepo.save(seatsToSave);
     }
 
-    // 6. TẠO 80 CHUYẾN BAY
-    console.log('🚀 Đang tạo 80 Chuyến bay (Đã tối ưu Batch Insert)...');
-    
+    // 6. TẠO CHUYẾN BAY
+    console.log('🚀 Tạo Chuyến bay & Bán vé...');
     const usedFlightCodes = new Set<string>();
+    let globalBookingCounter = 0;
 
     for (let i = 1; i <= 80; i++) {
       let from = getRandomItem(airports);
@@ -163,7 +180,6 @@ async function bootstrap() {
       
       const plane = getRandomItem(planes);
       
-      // Logic Time
       let startTime: Date;
       const randTimeStrategy = Math.random();
       if (randTimeStrategy > 0.7) { 
@@ -174,7 +190,7 @@ async function bootstrap() {
         startTime.setHours(getRandomInt(6, 23), getRandomItem([0, 15, 30, 45]), 0);
       }
       
-      const duration = getRandomInt(rules.minFlightTime, 180); 
+      const duration = getRandomInt(30, 180); 
       const endTime = new Date(startTime.getTime() + duration * 60000);
       const now = new Date();
 
@@ -192,12 +208,10 @@ async function bootstrap() {
         }
       }
 
-      // Unique Code
       let uniqueCode = '';
       do { uniqueCode = `VN${getRandomInt(1000, 9999)}`; } while (usedFlightCodes.has(uniqueCode));
       usedFlightCodes.add(uniqueCode);
 
-      // Lưu Chuyến bay
       const flight = await flightRepo.save({
         flightCode: uniqueCode,
         fromAirport: from, toAirport: to, startTime, endTime, duration,
@@ -206,7 +220,6 @@ async function bootstrap() {
         status: flightStatus, plane: plane,
       });
 
-      // Trung Gian (Chỉ 20% có để giảm load)
       if (Math.random() > 0.8) {
          let interAirport = getRandomItem(airports);
          while (interAirport.code === from.code || interAirport.code === to.code) interAirport = getRandomItem(airports);
@@ -215,104 +228,101 @@ async function bootstrap() {
          });
       }
 
-      // CT_HANGVE
       await flightDetailRepo.save([
         { flight: flight, ticketClass: bizClass, totalSeats: plane.businessSeats, soldSeats: 0, price: Math.floor(flight.price * bizClass.priceRatio) },
         { flight: flight, ticketClass: ecoClass, totalSeats: plane.economySeats, soldSeats: 0, price: Math.floor(flight.price * ecoClass.priceRatio) }
       ]);
 
-      // --- LOGIC BÁN VÉ (ĐÃ TỐI ƯU BATCH INSERT) ---
       if (flightStatus !== 'cancelled') {
         const fillRate = getRandomInt(30, 90) / 100;
         const seatsToSell = Math.floor(plane.totalSeats * fillRate);
         let seatsSoldSoFar = 0;
         let bizSold = 0;
         let ecoSold = 0;
+        const bookingsBatch: any[] = [];
+        const ticketsBatch: any[] = [];
         
-        // Mảng chứa vé chờ lưu (Gom lại lưu 1 lần)
-        const ticketsBatch: any[] = []; 
-        
-        // Vòng lặp tạo Booking và gom Vé
         while (seatsSoldSoFar < seatsToSell) {
           const bookingUser = getRandomItem(customers);
-          const ticketsInThisBooking = getRandomInt(1, 4);
+          const ticketsInThisBooking = Math.min(getRandomInt(1, 4), seatsToSell - seatsSoldSoFar);
           
-          // Random booking date
-          const latestValidTime = new Date(startTime.getTime() - (rules.latestBookingTime + 1) * 3600000);
-          const earliestTime = addDays(startTime, -15);
-          let bookingDate = earliestTime;
-          if (latestValidTime > earliestTime) {
-             const timeSpan = latestValidTime.getTime() - earliestTime.getTime();
-             bookingDate = new Date(earliestTime.getTime() + Math.random() * timeSpan);
-          }
-          if (bookingDate > now) bookingDate = now;
-
-          // Lưu Booking trước (Bắt buộc để lấy ID)
-          const booking = await bookingRepo.save({
-            bookingCode: `BK${Date.now().toString().slice(-6)}${getRandomInt(10,99)}`,
-            totalPrice: 0, 
-            status: (Math.random() > 0.95) ? 'cancelled' : 'confirmed', 
-            bookingDate: bookingDate, user: bookingUser
-          });
-
+          globalBookingCounter++;
+          const bookingCode = `BK${i}${globalBookingCounter}${getRandomInt(1000,9999)}`;
+          const bookingStatus = (Math.random() > 0.95) ? 'cancelled' : 'confirmed';
+          const bookingDate = new Date();
+          
           let bookingTotal = 0;
-
+          const tempTickets: any[] = [];
+          
           for (let t = 0; t < ticketsInThisBooking; t++) {
             if (seatsSoldSoFar >= seatsToSell) break;
-            
-            let isBiz = false;
-            if (plane.businessSeats > bizSold) isBiz = Math.random() > 0.9;
-            if (plane.economySeats <= ecoSold && plane.businessSeats > bizSold) isBiz = true;
-            
+            let isBiz = (plane.businessSeats > bizSold) ? Math.random() > 0.9 : false;
             const selectedClass = isBiz ? bizClass : ecoClass;
             const finalPrice = Math.floor(flight.price * selectedClass.priceRatio);
             
-            // 👉 THAY VÌ LƯU LUÔN, TA PUSH VÀO MẢNG BATCH
-            ticketsBatch.push({
-              ticketId: `TK${booking.id}${t}${getRandomInt(100,999)}`, // Thêm random để tránh trùng ID vé
+            tempTickets.push({
+              ticketId: `TK${bookingCode}${t}${getRandomInt(100,999)}`,
               seat: `${getRandomInt(1, 30)}${getRandomItem(['A','B','C','D'])}`,
               seatClass: selectedClass.name,
               price: finalPrice,
               passengerName: (t === 0) ? bookingUser.name : generateName(),
-              flight: flight, 
-              booking: booking
+              bookingCode: bookingCode
             });
 
             bookingTotal += finalPrice;
             seatsSoldSoFar++;
             if (isBiz) bizSold++; else ecoSold++;
           }
-          // Cập nhật giá booking
-          booking.totalPrice = bookingTotal;
-          await bookingRepo.save(booking);
+          
+          bookingsBatch.push({
+            bookingCode: bookingCode,
+            totalPrice: bookingTotal,
+            status: bookingStatus,
+            bookingDate: bookingDate,
+            user: bookingUser,
+            flight: flight,
+            tickets: tempTickets
+          });
         }
 
-        // 👉 LƯU TOÀN BỘ VÉ CỦA CHUYẾN BAY NÀY TRONG 1 LỆNH (Giảm 99% request)
-        if (ticketsBatch.length > 0) {
-           // Chia nhỏ batch nếu quá lớn (mỗi lần 100 vé) để Neon không báo lỗi
-           const chunkSize = 50; 
-           for (let k = 0; k < ticketsBatch.length; k += chunkSize) {
-              const chunk = ticketsBatch.slice(k, k + chunkSize);
-              await ticketRepo.save(chunk);
-           }
+        // Batch insert bookings
+        if (bookingsBatch.length > 0) {
+          for (const bookingData of bookingsBatch) {
+            const tickets = bookingData.tickets;
+            delete bookingData.tickets;
+            
+            const savedBooking = await bookingRepo.save(bookingData);
+            
+            const ticketsToInsert = tickets.map((t: any) => ({
+              ticketId: t.ticketId,
+              seat: t.seat,
+              seatClass: t.seatClass,
+              price: t.price,
+              passengerName: t.passengerName,
+              flight: flight,
+              booking: savedBooking
+            }));
+            
+            ticketsBatch.push(...ticketsToInsert);
+          }
+          
+          // Batch insert all tickets at once
+          if (ticketsBatch.length > 0) {
+            const chunkSize = 100;
+            for (let k = 0; k < ticketsBatch.length; k += chunkSize) {
+              await ticketRepo.save(ticketsBatch.slice(k, k + chunkSize));
+            }
+          }
         }
 
-        // Cập nhật thông tin chuyến bay
         flight.availableSeats = Math.floor(flight.totalSeats - seatsSoldSoFar);
         await flightRepo.save(flight);
-
-        await flightDetailRepo.update(
-          { flight: { id: flight.id }, ticketClass: { id: bizClass.id } }, 
-          { soldSeats: bizSold }
-        );
-        await flightDetailRepo.update(
-          { flight: { id: flight.id }, ticketClass: { id: ecoClass.id } }, 
-          { soldSeats: ecoSold }
-        );
+        await flightDetailRepo.update({ flight: { id: flight.id }, ticketClass: { id: bizClass.id } }, { soldSeats: bizSold });
+        await flightDetailRepo.update({ flight: { id: flight.id }, ticketClass: { id: ecoClass.id } }, { soldSeats: ecoSold });
       }
     }
 
-    console.log('✅✅✅ XONG! Full 11 Bảng Tiếng Việt - Đã tối ưu tốc độ.');
+    console.log('✅ SEED DONE - Hệ thống đã sẵn sàng!');
   } catch (err) {
     console.error('❌ Lỗi:', err);
   } finally {

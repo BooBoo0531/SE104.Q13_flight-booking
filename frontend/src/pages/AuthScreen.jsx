@@ -21,32 +21,61 @@ const PlaneTakeoff = (props) => (
   </svg>
 );
 
+const FormInput = (props) => (
+  <input
+    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
+    {...props}
+  />
+);
+
 export default function AuthScreen() {
   const [activeTab, setActiveTab] = useState("login");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [notice, setNotice] = useState("");
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const redirectTo = location.state?.from?.pathname || "/";
 
-  const handleSubmit = () => {
-    login();
-    navigate(redirectTo, { replace: true });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Gọi hàm login từ Context
+    const result = await login(email, password);
+
+    if (result.success) {
+      // Chỉ khi thành công mới chuyển trang
+      navigate(redirectTo, { replace: true });
+    } else {
+      // Nếu sai, hiển thị thông báo lỗi
+      alert(result.message);
+    }
   };
 
-  const handleForgotPassword = () => {
+  const handleForgotPassword = async () => {
     if (!email) {
       setNotice("Vui lòng nhập email để khôi phục mật khẩu.");
       return;
     }
-    setNotice(`✅ Mã khôi phục đã được gửi đến ${email}.`);
+
+    try {
+      const response = await axios.post('http://localhost:3000/auth/forgot-password', { 
+        email 
+      });
+      
+      setNotice(`✅ ${response.data.message}`);
+    } catch (error) {
+      setNotice(`❌ ${error.response?.data?.message || 'Có lỗi xảy ra'}`);
+    }
   };
 
   const TabButton = ({ tabName, children }) => (
     <button
       onClick={() => {
         setActiveTab(tabName);
+        setEmail("");
+        setPassword("");
         setNotice("");
       }}
       className={`w-1/2 py-3 text-sm font-semibold rounded-t-lg transition-colors focus:outline-none ${
@@ -57,13 +86,6 @@ export default function AuthScreen() {
     >
       {children}
     </button>
-  );
-
-  const FormInput = (props) => (
-    <input
-      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
-      {...props}
-    />
   );
 
   return (
@@ -98,12 +120,14 @@ export default function AuthScreen() {
               <FormInput
                 type="email"
                 placeholder="Email"
-                defaultValue="admin@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
               <FormInput
                 type="password"
                 placeholder="Mật khẩu"
-                defaultValue="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
               <button
                 onClick={handleSubmit}

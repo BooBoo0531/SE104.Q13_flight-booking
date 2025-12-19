@@ -43,6 +43,7 @@ exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const flights_module_1 = require("./modules/flights/flights.module");
+const auth_module_1 = require("./auth/auth.module");
 const dotenv = __importStar(require("dotenv"));
 dotenv.config();
 let AppModule = class AppModule {
@@ -65,6 +66,7 @@ exports.AppModule = AppModule = __decorate([
                 autoLoadEntities: true,
             }),
             flights_module_1.FlightsModule,
+            auth_module_1.AuthModule,
         ],
     })
 ], AppModule);

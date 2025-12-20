@@ -119,7 +119,8 @@ const AirplanesTab = () => {
             };
 
             if (editingAirplane) {
-                alert("Tính năng Cập nhật đang được phát triển ở Backend!");
+                await axios.patch(`${API_URL}/${editingAirplane.id}`, payload);
+                alert("Cập nhật máy bay thành công!");
             } else {
                 await axios.post(API_URL, payload);
                 alert("Thêm máy bay thành công!");
@@ -139,7 +140,7 @@ const AirplanesTab = () => {
             await axios.delete(`${API_URL}/${airplaneToDelete}`);
             fetchAirplanes(); 
         } catch (error) {
-            alert("Không thể xóa: " + error.message);
+            alert("Máy bay này không thể xóa vì đang có chuyến bay sử dụng.");
         } finally {
             setAirplaneToDelete(null);
         }

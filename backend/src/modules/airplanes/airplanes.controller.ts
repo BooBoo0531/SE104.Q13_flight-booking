@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Body, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Patch } from '@nestjs/common';
 import { AirplanesService } from './airplanes.service';
 import { CreateAirplaneDto } from './dto/create-airplane.dto';
+import { UpdateAirplaneDto } from './dto/update-airplane.dto';
 
 @Controller('airplanes')
 export class AirplanesController {
@@ -16,6 +17,11 @@ export class AirplanesController {
     return this.airplanesService.findAll();
   }
 
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() updateAirplaneDto: UpdateAirplaneDto) {
+    return this.airplanesService.update(+id, updateAirplaneDto);
+  }
+  
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.airplanesService.remove(+id);

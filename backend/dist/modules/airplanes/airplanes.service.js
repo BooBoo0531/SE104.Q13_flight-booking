@@ -37,6 +37,16 @@ let AirplanesService = class AirplanesService {
         await this.airplanesRepository.delete(id);
         return { deleted: true };
     }
+    async update(id, updateAirplaneDto) {
+        const economy = Number(updateAirplaneDto.economySeats);
+        const business = Number(updateAirplaneDto.businessSeats);
+        const totalSeats = economy + business;
+        await this.airplanesRepository.update(id, {
+            ...updateAirplaneDto,
+            totalSeats,
+        });
+        return this.airplanesRepository.findOneBy({ id });
+    }
 };
 exports.AirplanesService = AirplanesService;
 exports.AirplanesService = AirplanesService = __decorate([

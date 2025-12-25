@@ -43,7 +43,7 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "phone", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 'user', name: 'VaiTro' }),
+    (0, typeorm_1.Column)({ default: 'Nhân viên', name: 'VaiTro' }),
     __metadata("design:type", String)
 ], User.prototype, "role", void 0);
 __decorate([

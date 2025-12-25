@@ -18,7 +18,7 @@ export class User {
   @Column({ name: 'SoDienThoai', nullable: true })
   phone: string;
 
-  @Column({ default: 'user', name: 'VaiTro' }) 
+  @Column({ default: 'Nhân viên', name: 'VaiTro' }) 
   role: string;
 
   // Một người có nhiều phiếu đặt chỗ

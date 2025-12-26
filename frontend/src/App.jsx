@@ -1,7 +1,6 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
-import ProtectedRoute from "./auth/ProtectedRoute";
 
 import AuthScreen from "./pages/AuthScreen"; 
 import DashboardScreen from "./pages/DashboardScreen";
@@ -13,15 +12,13 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* /login: trang đăng nhập/đăng ký */}
           <Route path="/login" element={<AuthScreen />} />
 
-          {/* /: màn hình chính (bảo vệ) */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/" element={<DashboardScreen />} />
-          </Route>
+          <Route path="/dashboard" element={<DashboardScreen />} />
 
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/" element={<Navigate to="/login" replace />} />
+
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

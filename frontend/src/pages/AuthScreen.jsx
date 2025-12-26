@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext"; 
 import axios from "axios";
@@ -35,30 +35,34 @@ export default function AuthScreen() {
   const [password, setPassword] = useState("");
   const [notice, setNotice] = useState("");
   
-  // const { login } = useAuth(); // Tạm ẩn
   const navigate = useNavigate();
-  const location = useLocation();
-  const redirectTo = location.state?.from?.pathname || "/dashboard"; // Mặc định về Dashboard
 
-  // 👇 HÀM XỬ LÝ ĐĂNG NHẬP MỚI (QUAN TRỌNG)
+  useEffect(() => {
+      const token = localStorage.getItem('token');
+      const user = localStorage.getItem('user');
+      if (token && user) {
+          window.location.href = '/dashboard';
+      }
+  }, []);
+
+  const location = useLocation();
+  const redirectTo = location.state?.from?.pathname || "/dashboard";
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     try {
-      // 1. Gọi API đăng nhập trực tiếp
       const response = await axios.post('http://localhost:3000/auth/login', { 
         email, 
         password 
       });
 
-      // 2. Lưu thông tin quan trọng vào localStorage
-      // Đây là bước quyết định để Dashboard biết bạn là ai (Admin/Nhân viên...)
       localStorage.setItem('user', JSON.stringify(response.data.user)); 
       localStorage.setItem('token', response.data.access_token);
 
-      // 3. Thông báo và chuyển hướng
       alert("Đăng nhập thành công!");
-      navigate(redirectTo, { replace: true });
+      
+      window.location.href = '/dashboard'; 
 
     } catch (error) {
       console.error(error);
@@ -66,7 +70,6 @@ export default function AuthScreen() {
       alert(msg);
     }
   };
-
   const handleForgotPassword = async () => {
     if (!email) {
       setNotice("Vui lòng nhập email để khôi phục mật khẩu.");

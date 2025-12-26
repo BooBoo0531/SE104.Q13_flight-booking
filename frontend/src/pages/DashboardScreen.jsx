@@ -18,7 +18,7 @@ export default function DashboardScreen() {
   const navigate = useNavigate();
   const { logout } = useAuth();
   
-  // 👇 THAY ĐỔI 1: Không dùng mảng tĩnh nữa, dùng state để lưu danh sách Tab được phép
+  // State quản lý Tab động
   const [allowedTabs, setAllowedTabs] = useState([]); 
   const [activeTab, setActiveTab] = useState('');
   const [loading, setLoading] = useState(true);
@@ -39,34 +39,43 @@ export default function DashboardScreen() {
       minFlightTime: 30, maxStopovers: 2, minStopTime: 10, maxStopTime: 20, latestBookingTime: 1, latestCancelTime: 1,
   });
 
-  // Permissions state vẫn giữ để truyền xuống UsersTab (cho chức năng phân quyền)
   const [permissions, setPermissions] = useState({});
-
   const [flightToBook, setFlightToBook] = useState(null);
 
-  // 👇 THAY ĐỔI 2: Thêm useEffect để Check quyền và Lọc Tab
+  // 👇 SỬA ĐỔI QUAN TRỌNG: Check đăng nhập an toàn & Load quyền
   useEffect(() => {
     const initDashboard = async () => {
         // 1. Kiểm tra User trong LocalStorage
         const storedUser = localStorage.getItem('user');
-        if (!storedUser) {
-            navigate('/login', { replace: true });
+        const storedToken = localStorage.getItem('token');
+
+        // Nếu thiếu thông tin -> Đá về trang chủ bằng href để load lại từ đầu
+        if (!storedUser || !storedToken) {
+            window.location.href = '/'; 
             return;
         }
-        const currentUser = JSON.parse(storedUser);
+
+        let currentUser;
+        try {
+            currentUser = JSON.parse(storedUser);
+        } catch (error) {
+            // Nếu dữ liệu lỗi -> Xóa sạch và đá về login
+            localStorage.clear();
+            window.location.href = '/';
+            return;
+        }
 
         try {
             // 2. Gọi API lấy bảng phân quyền
             const res = await axios.get('http://localhost:3000/users/permissions');
             const allPermissions = res.data;
-            setPermissions(allPermissions); // Cập nhật state permissions cho tab Users
+            setPermissions(allPermissions);
 
             // 3. Lọc Tab dựa trên Role của User hiện tại
             const userPerms = allPermissions[currentUser.role];
             
             if (userPerms) {
                 const tabsToShow = [];
-                // Mapping thủ công từ Key Database sang Tên Tab hiển thị (để khớp với switch case bên dưới)
                 if (userPerms.ChuyenBay) tabsToShow.push('Chuyến bay');
                 if (userPerms.VeChuyenBay) tabsToShow.push('Vé máy bay');
                 if (userPerms.BaoCao) tabsToShow.push('Báo cáo');
@@ -85,16 +94,15 @@ export default function DashboardScreen() {
             }
         } catch (error) {
             console.error("Lỗi tải Dashboard:", error);
-            // Fallback nếu lỗi API: hiện tất cả hoặc mảng rỗng tùy logic (ở đây để rỗng để an toàn)
         } finally {
             setLoading(false);
         }
     };
 
     initDashboard();
-  }, [navigate]);
+  }, []); // Bỏ dependency navigate để tránh loop
 
-  // --- HANDLERS (GIỮ NGUYÊN TOÀN BỘ) ---
+  // --- HANDLERS (GIỮ NGUYÊN TOÀN BỘ CODE CỦA BẠN) ---
   const calculateFlightTime = (hourStr, minuteStr, durationStr) => {
       const hour = parseInt(hourStr, 10), minute = parseInt(minuteStr, 10), duration = parseInt(durationStr, 10);
       if (isNaN(hour) || isNaN(minute) || isNaN(duration)) return 'N/A';
@@ -176,7 +184,7 @@ export default function DashboardScreen() {
   const handleUpdateUser = (updatedUser) => { setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u)); alert(`Cập nhật tài khoản ${updatedUser.name} thành công!`) }
   const handleDeleteUser = (userId) => { setUsers(users.filter(user => user.id !== userId)); };
 
-  // --- RENDER (GIỮ NGUYÊN LOGIC, CHỈ THAY ĐỔI HEADER PROPS) ---
+  // --- RENDER ---
   const renderTabContent = () => {
     switch(activeTab) {
       case 'Chuyến bay':
@@ -196,20 +204,19 @@ export default function DashboardScreen() {
     }
   };
 
-  // Màn hình chờ khi đang load quyền
+  const handleLogout = () => {
+    localStorage.clear();
+    window.location.href = '/'; 
+  };
+
   if (loading) return <div className="flex h-screen items-center justify-center">Đang tải dữ liệu...</div>;
 
   return (
     <div className="w-screen h-screen flex flex-col bg-white overflow-hidden animate-fade-in">
-      {/* 👇 THAY ĐỔI 3: Truyền allowedTabs (đã lọc) vào Header thay vì TABS tĩnh */}
       <Header 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
-        onLogout={() => { 
-            // Xử lý logout thủ công
-            localStorage.clear();
-            navigate("/login", { replace: true }); 
-        }} 
+        onLogout={handleLogout}
         TABS={allowedTabs} 
       />
       <main className="flex-1 bg-gray-50 overflow-y-auto">

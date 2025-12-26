@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../auth/AuthContext";
+import { useAuth } from "../auth/AuthContext"; 
+import axios from "axios";
 
 const PlaneTakeoff = (props) => (
   <svg
@@ -33,26 +34,42 @@ export default function AuthScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [notice, setNotice] = useState("");
-  const { login } = useAuth();
+  
   const navigate = useNavigate();
+
+  useEffect(() => {
+      const token = localStorage.getItem('token');
+      const user = localStorage.getItem('user');
+      if (token && user) {
+          window.location.href = '/dashboard';
+      }
+  }, []);
+
   const location = useLocation();
-  const redirectTo = location.state?.from?.pathname || "/";
+  const redirectTo = location.state?.from?.pathname || "/dashboard";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Gọi hàm login từ Context
-    const result = await login(email, password);
+    try {
+      const response = await axios.post('http://localhost:3000/auth/login', { 
+        email, 
+        password 
+      });
 
-    if (result.success) {
-      // Chỉ khi thành công mới chuyển trang
-      navigate(redirectTo, { replace: true });
-    } else {
-      // Nếu sai, hiển thị thông báo lỗi
-      alert(result.message);
+      localStorage.setItem('user', JSON.stringify(response.data.user)); 
+      localStorage.setItem('token', response.data.access_token);
+
+      alert("Đăng nhập thành công!");
+      
+      window.location.href = '/dashboard'; 
+
+    } catch (error) {
+      console.error(error);
+      const msg = error.response?.data?.message || "Đăng nhập thất bại, vui lòng kiểm tra lại!";
+      alert(msg);
     }
   };
-
   const handleForgotPassword = async () => {
     if (!email) {
       setNotice("Vui lòng nhập email để khôi phục mật khẩu.");
@@ -152,7 +169,7 @@ export default function AuthScreen() {
               <FormInput type="email" placeholder="Email" />
               <FormInput type="password" placeholder="Mật khẩu" />
               <button
-                onClick={handleSubmit}
+                onClick={() => alert("Chức năng đăng ký đang bảo trì (Vui lòng nhờ Admin tạo tài khoản)")}
                 className="w-full bg-green-500 text-white font-bold py-3 rounded-lg hover:bg-green-600 transition-all transform hover:scale-105 shadow-md hover:shadow-lg"
               >
                 Tạo tài khoản

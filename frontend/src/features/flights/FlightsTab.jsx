@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { CalendarIcon, EditIcon, TrashIcon, PlusCircleIcon } from "../../components/common/Icons";
 import ConfirmationModal from "../../components/common/ConfirmationModal";
 
-// --- Sub-component: FlightList ---
-const FlightList = ({ flights, onEdit, onDelete, onBookTicket }) => {
+// --- Sub-component: FlightList (Cập nhật để nhận props phân quyền) ---
+const FlightList = ({ flights, onEdit, onDelete, onBookTicket, canManage, canBook }) => {
     const [searchDate, setSearchDate] = useState('');
     const [fromCitySearch, setFromCitySearch] = useState('all');
     const [toCitySearch, setToCitySearch] = useState('all');
@@ -39,7 +39,13 @@ const FlightList = ({ flights, onEdit, onDelete, onBookTicket }) => {
             </div>
             <div className="overflow-x-auto">
                 <table className="w-full text-left">
-                    <thead className="bg-gray-100"><tr>{['Mã chuyến bay', 'Sân bay cất cánh', 'Nơi cất cánh', 'Sân bay hạ cánh', 'Nơi hạ cánh', 'Thời gian', 'Ghế trống', 'Ghế đã đặt', 'Thao tác'].map(h => <th key={h} className="p-3 font-semibold text-gray-600 text-sm">{h}</th>)}</tr></thead>
+                    <thead className="bg-gray-100">
+                        <tr>
+                            {['Mã chuyến bay', 'Sân bay cất cánh', 'Nơi cất cánh', 'Sân bay hạ cánh', 'Nơi hạ cánh', 'Thời gian', 'Ghế trống', 'Ghế đã đặt'].map(h => <th key={h} className="p-3 font-semibold text-gray-600 text-sm">{h}</th>)}
+                            {/* Chỉ hiện cột Thao tác nếu có ít nhất 1 quyền (Book hoặc Manage) */}
+                            {(canManage || canBook) && <th className="p-3 font-semibold text-gray-600 text-sm">Thao tác</th>}
+                        </tr>
+                    </thead>
                     <tbody>
                         {filteredFlights.map(f => (
                             <tr key={f.id} className="border-b hover:bg-blue-50 transition">
@@ -48,13 +54,26 @@ const FlightList = ({ flights, onEdit, onDelete, onBookTicket }) => {
                                 <td className="p-3">{f.time}</td>
                                 <td className="p-3 text-green-600 font-medium">{f.seatsEmpty}</td>
                                 <td className="p-3 text-red-600 font-medium">{f.seatsTaken}</td>
-                                <td className="p-3">
-                                    <div className="flex items-center space-x-1">
-                                        <button onClick={() => onBookTicket(f)} className="bg-blue-500 text-white text-xs font-bold py-1 px-2 rounded hover:bg-blue-600">Đặt vé</button>
-                                        <button onClick={() => onEdit(f)} className="p-1 text-gray-500 hover:text-green-600"><EditIcon className="w-4 h-4"/></button>
-                                        <button onClick={() => onDelete(f.id)} className="p-1 text-gray-500 hover:text-red-600"><TrashIcon className="w-4 h-4"/></button>
-                                    </div>
-                                </td>
+                                
+                                {/* Cột Thao tác: Render có điều kiện */}
+                                {(canManage || canBook) && (
+                                    <td className="p-3">
+                                        <div className="flex items-center space-x-1">
+                                            {/* Nút Đặt vé */}
+                                            {canBook && (
+                                                <button onClick={() => onBookTicket(f)} className="bg-blue-500 text-white text-xs font-bold py-1 px-2 rounded hover:bg-blue-600">Đặt vé</button>
+                                            )}
+                                            
+                                            {/* Nút Sửa/Xóa */}
+                                            {canManage && (
+                                                <>
+                                                    <button onClick={() => onEdit(f)} className="p-1 text-gray-500 hover:text-green-600"><EditIcon className="w-4 h-4"/></button>
+                                                    <button onClick={() => onDelete(f.id)} className="p-1 text-gray-500 hover:text-red-600"><TrashIcon className="w-4 h-4"/></button>
+                                                </>
+                                            )}
+                                        </div>
+                                    </td>
+                                )}
                             </tr>
                         ))}
                     </tbody>
@@ -64,7 +83,7 @@ const FlightList = ({ flights, onEdit, onDelete, onBookTicket }) => {
     );
 };
 
-// --- Sub-component: FlightForm ---
+// --- Sub-component: FlightForm (GIỮ NGUYÊN 100%) ---
 const FlightForm = ({ initialData, onSubmit, onCancel, airports, rules }) => {
     const isEditMode = !!initialData;
     const [flightData, setFlightData] = useState(isEditMode ? initialData : { fromAirport: '', fromCity: '', toAirport: '', toCity: '', planeId: '', date: '', hour: '', minute: '', duration: '', price: '', businessSeats: 30, economySeats: 30, seatsTaken: 0, });
@@ -134,6 +153,11 @@ const FlightsTab = ({ flights, airports, rules, onEdit, onDelete, onCreate, onBo
     const [subTab, setSubTab] = useState('list');
     const [editingFlight, setEditingFlight] = useState(null);
     const [flightToDelete, setFlightToDelete] = useState(null);
+
+    // 👇 LOGIC PHÂN QUYỀN (MỚI THÊM)
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const canManage = ['Quản trị', 'Điều hành bay'].includes(user.role); // Sửa/Xóa/Thêm
+    const canBook = ['Quản trị', 'Nhân viên'].includes(user.role); // Đặt vé
     
     const handleEditClick = (flight) => { setEditingFlight(flight); setSubTab('edit'); };
     const handleSave = (updatedFlight) => { onEdit(updatedFlight); setSubTab('list'); setEditingFlight(null); };
@@ -147,9 +171,23 @@ const FlightsTab = ({ flights, airports, rules, onEdit, onDelete, onCreate, onBo
 
     const renderContent = () => {
         switch(subTab) {
-            case 'list': return <FlightList flights={flights} onEdit={handleEditClick} onDelete={handleDeleteClick} onBookTicket={onBookTicket} />;
-            case 'create': return <FlightForm onSubmit={handleCreate} onCancel={handleCancel} airports={airports} rules={rules} />;
-            case 'edit': return <FlightForm initialData={editingFlight} onSubmit={handleSave} onCancel={handleCancel} airports={airports} rules={rules} />;
+            case 'list': 
+                return (
+                    <FlightList 
+                        flights={flights} 
+                        onEdit={handleEditClick} 
+                        onDelete={handleDeleteClick} 
+                        onBookTicket={onBookTicket}
+                        // 👇 Truyền quyền xuống FlightList
+                        canManage={canManage}
+                        canBook={canBook}
+                    />
+                );
+            case 'create': 
+                // Bảo vệ thêm 1 lớp: Nếu không có quyền quản lý mà cố vào tab create thì không render form
+                return canManage ? <FlightForm onSubmit={handleCreate} onCancel={handleCancel} airports={airports} rules={rules} /> : <div className="p-6 text-red-500">Bạn không có quyền tạo chuyến bay.</div>;
+            case 'edit': 
+                return canManage ? <FlightForm initialData={editingFlight} onSubmit={handleSave} onCancel={handleCancel} airports={airports} rules={rules} /> : <div className="p-6 text-red-500">Bạn không có quyền chỉnh sửa.</div>;
             default: return null;
         }
     }
@@ -159,7 +197,12 @@ const FlightsTab = ({ flights, airports, rules, onEdit, onDelete, onCreate, onBo
             <div className="px-6 pt-4 pb-2 border-b flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                     <SubTabButton value="list">Danh sách chuyến bay</SubTabButton>
-                    <SubTabButton value="create">Tạo chuyến bay mới</SubTabButton>
+                    
+                    {/* 👇 CHỈ HIỆN NÚT "Tạo chuyến bay mới" NẾU CÓ QUYỀN QUẢN LÝ */}
+                    {canManage && (
+                        <SubTabButton value="create">Tạo chuyến bay mới</SubTabButton>
+                    )}
+
                     {subTab === 'edit' && (<span className="px-6 py-2 rounded-full text-sm font-semibold bg-blue-600 text-white shadow animate-fade-in">Chi tiết chuyến bay</span>)}
                 </div>
             </div>

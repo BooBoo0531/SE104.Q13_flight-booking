@@ -46,6 +46,7 @@ const flights_module_1 = require("./modules/flights/flights.module");
 const auth_module_1 = require("./auth/auth.module");
 const airplanes_module_1 = require("./modules/airplanes/airplanes.module");
 const users_module_1 = require("./modules/users/users.module");
+const reports_module_1 = require("./modules/reports/reports.module");
 const dotenv = __importStar(require("dotenv"));
 dotenv.config();
 let AppModule = class AppModule {
@@ -71,6 +72,7 @@ exports.AppModule = AppModule = __decorate([
             auth_module_1.AuthModule,
             airplanes_module_1.AirplanesModule,
             users_module_1.UsersModule,
+            reports_module_1.ReportsModule,
         ],
     })
 ], AppModule);

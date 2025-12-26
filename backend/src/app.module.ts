@@ -4,6 +4,7 @@ import { FlightsModule } from './modules/flights/flights.module';
 import { AuthModule } from './auth/auth.module';
 import { AirplanesModule } from './modules/airplanes/airplanes.module';
 import { UsersModule } from './modules/users/users.module';
+import { ReportsModule } from './modules/reports/reports.module';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
@@ -28,6 +29,7 @@ dotenv.config();
     AuthModule,
     AirplanesModule,
     UsersModule,
+    ReportsModule,
   ],
 })
 export class AppModule {}

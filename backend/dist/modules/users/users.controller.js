@@ -26,6 +26,9 @@ let UsersController = class UsersController {
     getPermissions() { return this.usersService.getAllPermissions(); }
     savePermissions(body) { return this.usersService.savePermissions(body); }
     seed() { return this.usersService.seedDefaultPermissions(); }
+    updateUser(id, body) {
+        return this.usersService.updateUser(+id, body);
+    }
 };
 exports.UsersController = UsersController;
 __decorate([
@@ -67,6 +70,14 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "seed", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "updateUser", null);
 exports.UsersController = UsersController = __decorate([
     (0, common_1.Controller)('users'),
     __metadata("design:paramtypes", [users_service_1.UsersService])

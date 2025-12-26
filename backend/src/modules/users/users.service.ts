@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
@@ -24,6 +24,24 @@ export class UsersService {
     const hashedPassword = await bcrypt.hash(data.password, salt);
     const newUser = this.usersRepo.create({ ...data, password: hashedPassword });
     return this.usersRepo.save(newUser);
+  }
+
+  async updateUser(id: number, data: any) {
+    const user = await this.usersRepo.findOneBy({ id });
+    if (!user) {
+      throw new NotFoundException('Không tìm thấy người dùng');
+    }
+
+    if (data.password && data.password.trim() !== '') {
+      const salt = await bcrypt.genSalt(10);
+      data.password = await bcrypt.hash(data.password, salt);
+    } else {
+      delete data.password;
+    }
+
+    await this.usersRepo.update(id, data);
+
+    return this.usersRepo.findOneBy({ id });
   }
 
   async deleteUser(id: number) {

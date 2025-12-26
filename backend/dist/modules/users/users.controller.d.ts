@@ -10,4 +10,5 @@ export declare class UsersController {
         success: boolean;
     }>;
     seed(): Promise<"Đã tạo dữ liệu mẫu!" | "Dữ liệu đã có sẵn.">;
+    updateUser(id: string, body: any): Promise<import("./entities/user.entity").User | null>;
 }

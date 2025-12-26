@@ -7,6 +7,7 @@ export declare class UsersService {
     constructor(usersRepo: Repository<User>, rolesRepo: Repository<RolePermission>);
     findAllUsers(): Promise<User[]>;
     createUser(data: any): Promise<User[]>;
+    updateUser(id: number, data: any): Promise<User | null>;
     deleteUser(id: number): Promise<import("typeorm").DeleteResult>;
     getAllPermissions(): Promise<{}>;
     savePermissions(permissionsData: any): Promise<{

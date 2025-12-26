@@ -68,6 +68,21 @@ let UsersService = class UsersService {
         const newUser = this.usersRepo.create({ ...data, password: hashedPassword });
         return this.usersRepo.save(newUser);
     }
+    async updateUser(id, data) {
+        const user = await this.usersRepo.findOneBy({ id });
+        if (!user) {
+            throw new common_1.NotFoundException('Không tìm thấy người dùng');
+        }
+        if (data.password && data.password.trim() !== '') {
+            const salt = await bcrypt.genSalt(10);
+            data.password = await bcrypt.hash(data.password, salt);
+        }
+        else {
+            delete data.password;
+        }
+        await this.usersRepo.update(id, data);
+        return this.usersRepo.findOneBy({ id });
+    }
     async deleteUser(id) {
         return this.usersRepo.delete(id);
     }

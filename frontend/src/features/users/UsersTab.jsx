@@ -71,13 +71,7 @@ const UsersTab = () => {
                 axios.get(`${API_URL}/permissions`)
             ]);
 
-            // Map dữ liệu User từ Backend (createdAt) sang Frontend (date)
-            const mappedUsers = Array.isArray(usersRes.data) ? usersRes.data.map(u => ({
-                ...u,
-                // Chuyển đổi ngày tháng cho đẹp
-                date: u.createdAt ? new Date(u.createdAt).toLocaleDateString('vi-VN') : new Date().toLocaleDateString('vi-VN')
-            })) : [];
-            setUsers(mappedUsers);
+            setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
 
             // Xử lý Permissions: Nếu rỗng thì tạo mặc định để hiển thị được bảng
             let permsData = permsRes.data || {};
@@ -121,11 +115,19 @@ const UsersTab = () => {
         }
     };
 
-    const handleUpdateUser = async (updatedUser) => { 
-        // Hiện tại Backend chưa có API Update User (PUT/PATCH), tạm thời alert
-        // Nếu bạn muốn làm tính năng này, cần bổ sung API PATCH users/:id ở Backend
-        alert("Tính năng cập nhật thông tin đang được phát triển ở Backend!");
-        setEditingUser(null); 
+    const handleUpdateUser = async (updatedUser) => {
+        try {
+            const { createdAt, id, ...payload } = updatedUser; 
+
+            await axios.patch(`${API_URL}/${id}`, payload);
+            
+            alert("Cập nhật thông tin thành công!");
+            setEditingUser(null);
+            fetchData();
+        } catch (error) {
+            console.error(error);
+            alert("Lỗi cập nhật: " + (error.response?.data?.message || error.message));
+        }
     };
 
     const handleDeleteClick = (userId) => { setUserToDelete(userId); };
@@ -207,14 +209,14 @@ const UsersTab = () => {
                             <table className="w-full text-left">
                                 <thead className="bg-gray-50 sticky top-0 z-10 border-b shadow-sm">
                                     <tr>
-                                        {['Tên tài khoản', 'Ngày tạo', 'Nhóm quyền', 'Thao tác'].map(h => <th key={h} className="p-3 font-semibold text-gray-600 text-sm">{h}</th>)}
+                                        {['Tên tài khoản', 'Email', 'Nhóm quyền', 'Thao tác'].map(h => <th key={h} className="p-3 font-semibold text-gray-600 text-sm">{h}</th>)}
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {users.map((user) => (
                                         <tr key={user.id} className="border-b hover:bg-gray-50 transition-colors">
                                             <td className="p-3">{user.name}</td>
-                                            <td className="p-3 text-gray-500">{user.date}</td>
+                                            <td className="p-3 text-gray-500">{user.email}</td>
                                             <td className="p-3"><span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-bold">{user.role}</span></td>
                                             <td className="p-3">
                                                 <div className="flex items-center space-x-2">

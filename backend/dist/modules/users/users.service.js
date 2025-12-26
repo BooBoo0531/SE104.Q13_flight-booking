@@ -60,7 +60,16 @@ let UsersService = class UsersService {
         this.rolesRepo = rolesRepo;
     }
     async findAllUsers() {
-        return this.usersRepo.find({ order: { id: 'DESC' } });
+        return this.usersRepo.find({
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                role: true,
+            },
+            order: { id: 'DESC' }
+        });
     }
     async createUser(data) {
         const salt = await bcrypt.genSalt(10);
@@ -104,10 +113,10 @@ let UsersService = class UsersService {
         const count = await this.rolesRepo.count();
         if (count === 0) {
             await this.rolesRepo.save([
-                { role: 'Quản trị', permissions: { ChuyenBay: true, VeChuyenBay: true, BaoCao: true, MayBay: true, TaiKhoan: true, CaiDat: true } },
+                { role: 'Quản trị hệ thống', permissions: { ChuyenBay: true, VeChuyenBay: true, BaoCao: true, MayBay: true, TaiKhoan: true, CaiDat: true } },
                 { role: 'Ban giám đốc', permissions: { ChuyenBay: false, VeChuyenBay: false, BaoCao: true, MayBay: false, TaiKhoan: false, CaiDat: true } },
                 { role: 'Điều hành bay', permissions: { ChuyenBay: true, VeChuyenBay: false, BaoCao: false, MayBay: true, TaiKhoan: false, CaiDat: false } },
-                { role: 'Nhân viên', permissions: { ChuyenBay: false, VeChuyenBay: true, BaoCao: false, MayBay: false, TaiKhoan: false, CaiDat: false } },
+                { role: 'Nhân viên bán vé', permissions: { ChuyenBay: false, VeChuyenBay: true, BaoCao: false, MayBay: false, TaiKhoan: false, CaiDat: false } },
             ]);
             return "Đã tạo dữ liệu mẫu!";
         }

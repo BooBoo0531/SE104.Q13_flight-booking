@@ -16,7 +16,16 @@ export class UsersService {
 
   // --- QUẢN LÝ USER ---
   async findAllUsers() {
-    return this.usersRepo.find({ order: { id: 'DESC' } });
+    return this.usersRepo.find({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+      },
+      order: { id: 'DESC' } 
+    });
   }
 
   async createUser(data: any) {
@@ -32,6 +41,7 @@ export class UsersService {
       throw new NotFoundException('Không tìm thấy người dùng');
     }
 
+    // Xử lý mật khẩu: Nếu nhập mới thì hash, nếu để trống thì xóa khỏi data để không bị update nhầm thành chuỗi rỗng
     if (data.password && data.password.trim() !== '') {
       const salt = await bcrypt.genSalt(10);
       data.password = await bcrypt.hash(data.password, salt);
@@ -41,6 +51,7 @@ export class UsersService {
 
     await this.usersRepo.update(id, data);
 
+    // Trả về user sau khi update (để frontend cập nhật lại list nếu cần)
     return this.usersRepo.findOneBy({ id });
   }
 
@@ -69,11 +80,11 @@ export class UsersService {
     const count = await this.rolesRepo.count();
     if (count === 0) {
       await this.rolesRepo.save([
-      { role: 'Quản trị', permissions: { ChuyenBay: true, VeChuyenBay: true, BaoCao: true, MayBay: true, TaiKhoan: true, CaiDat: true } },
-      { role: 'Ban giám đốc', permissions: { ChuyenBay: false, VeChuyenBay: false, BaoCao: true, MayBay: false, TaiKhoan: false, CaiDat: true } },
-      { role: 'Điều hành bay', permissions: { ChuyenBay: true, VeChuyenBay: false, BaoCao: false, MayBay: true, TaiKhoan: false, CaiDat: false } },
-      { role: 'Nhân viên', permissions: { ChuyenBay: false, VeChuyenBay: true, BaoCao: false, MayBay: false, TaiKhoan: false, CaiDat: false } },
-    ]);
+        { role: 'Quản trị hệ thống', permissions: { ChuyenBay: true, VeChuyenBay: true, BaoCao: true, MayBay: true, TaiKhoan: true, CaiDat: true } },
+        { role: 'Ban giám đốc', permissions: { ChuyenBay: false, VeChuyenBay: false, BaoCao: true, MayBay: false, TaiKhoan: false, CaiDat: true } },
+        { role: 'Điều hành bay', permissions: { ChuyenBay: true, VeChuyenBay: false, BaoCao: false, MayBay: true, TaiKhoan: false, CaiDat: false } },
+        { role: 'Nhân viên bán vé', permissions: { ChuyenBay: false, VeChuyenBay: true, BaoCao: false, MayBay: false, TaiKhoan: false, CaiDat: false } },
+      ]);
       return "Đã tạo dữ liệu mẫu!";
     }
     return "Dữ liệu đã có sẵn.";

@@ -51,7 +51,6 @@ const UserForm = ({ initialData, roles, onSubmit, onCancel }) => {
 
 // --- 2. MAIN COMPONENT (Logic API + Giao diện cũ) ---
 const UsersTab = () => {
-    // Thay vì nhận props, ta dùng state nội bộ
     const [users, setUsers] = useState([]);
     const [localPermissions, setLocalPermissions] = useState({});
     
@@ -59,11 +58,13 @@ const UsersTab = () => {
     const [editingUser, setEditingUser] = useState(null);
     const [saveButtonText, setSaveButtonText] = useState('Lưu');
 
-    // Cấu hình mặc định để bảng không bị trống nếu DB chưa có dữ liệu quyền
+    // 👇 LOGIC PHÂN QUYỀN: Chỉ Admin mới có quyền thao tác
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const canManage = user.role === 'Quản trị';
+
     const DEFAULT_ROLES = ['Quản trị', 'Ban giám đốc', 'Điều hành bay', 'Nhân viên'];
     const DEFAULT_MODULES = { 'ChuyenBay': false, 'VeChuyenBay': false, 'BaoCao': false, 'MayBay': false, 'TaiKhoan': false, 'CaiDat': false };
 
-    // --- API: Fetch Data ---
     const fetchData = async () => {
         try {
             const [usersRes, permsRes] = await Promise.all([
@@ -73,7 +74,6 @@ const UsersTab = () => {
 
             setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
 
-            // Xử lý Permissions: Nếu rỗng thì tạo mặc định để hiển thị được bảng
             let permsData = permsRes.data || {};
             if (Object.keys(permsData).length === 0) {
                 DEFAULT_ROLES.forEach(role => { permsData[role] = { ...DEFAULT_MODULES }; });
@@ -87,8 +87,8 @@ const UsersTab = () => {
 
     useEffect(() => { fetchData(); }, []);
 
-    // --- Handlers Logic ---
     const handlePermissionChange = (role, permission, value) => { 
+        if (!canManage) return; // Chặn nếu không có quyền
         setLocalPermissions(prev => ({ 
             ...prev, 
             [role]: { ...prev[role], [permission]: value } 
@@ -96,6 +96,7 @@ const UsersTab = () => {
     };
 
     const handleSavePermissions = async () => { 
+        if (!canManage) return; 
         try {
             await axios.post(`${API_URL}/permissions`, localPermissions);
             setSaveButtonText("Đã lưu!"); 
@@ -109,7 +110,7 @@ const UsersTab = () => {
         try {
             await axios.post(API_URL, newUser);
             alert("Tạo tài khoản thành công!");
-            fetchData(); // Load lại danh sách
+            fetchData(); 
         } catch (error) {
             alert("Lỗi tạo user: " + (error.response?.data?.message || error.message));
         }
@@ -118,9 +119,7 @@ const UsersTab = () => {
     const handleUpdateUser = async (updatedUser) => {
         try {
             const { createdAt, id, ...payload } = updatedUser; 
-
             await axios.patch(`${API_URL}/${id}`, payload);
-            
             alert("Cập nhật thông tin thành công!");
             setEditingUser(null);
             fetchData();
@@ -147,14 +146,8 @@ const UsersTab = () => {
     const handleEditClick = (user) => { setEditingUser(user); }
     const handleCancelEdit = () => { setEditingUser(null); }
 
-    // Header bảng quyền (Mapping key sang tiếng Việt hiển thị)
     const PERMISSION_HEADERS = {
-        'ChuyenBay': 'Chuyến bay', 
-        'VeChuyenBay': 'Vé chuyến bay', 
-        'BaoCao': 'Báo cáo', 
-        'MayBay': 'Máy bay', 
-        'TaiKhoan': 'Tài khoản và quyền', 
-        'CaiDat': 'Cài đặt'
+        'ChuyenBay': 'Chuyến bay', 'VeChuyenBay': 'Vé chuyến bay', 'BaoCao': 'Báo cáo', 'MayBay': 'Máy bay', 'TaiKhoan': 'Tài khoản và quyền', 'CaiDat': 'Cài đặt'
     };
     const permissionKeys = ['ChuyenBay', 'VeChuyenBay', 'BaoCao', 'MayBay', 'TaiKhoan', 'CaiDat'];
 
@@ -169,7 +162,8 @@ const UsersTab = () => {
                     <div className="bg-white rounded-lg shadow p-4 border border-gray-200">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-xl font-semibold text-gray-800">Quyền hạn của các nhóm tài khoản</h3>
-                            <button onClick={handleSavePermissions} className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition w-24 shadow">{saveButtonText}</button>
+                            {/* 👇 Chỉ hiện nút Lưu nếu có quyền */}
+                            {canManage && <button onClick={handleSavePermissions} className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition w-24 shadow">{saveButtonText}</button>}
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm text-left">
@@ -189,7 +183,8 @@ const UsersTab = () => {
                                                         type="checkbox" 
                                                         checked={perms[permKey] || false} 
                                                         onChange={(e) => handlePermissionChange(role, permKey, e.target.checked)} 
-                                                        className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer" 
+                                                        disabled={!canManage} // 👇 Disable checkbox nếu không có quyền
+                                                        className={`h-4 w-4 rounded focus:ring-blue-500 ${canManage ? 'cursor-pointer text-blue-600' : 'cursor-not-allowed text-gray-400'}`} 
                                                     />
                                                 </td>
                                             ))}
@@ -219,10 +214,13 @@ const UsersTab = () => {
                                             <td className="p-3 text-gray-500">{user.email}</td>
                                             <td className="p-3"><span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-bold">{user.role}</span></td>
                                             <td className="p-3">
-                                                <div className="flex items-center space-x-2">
-                                                    <button onClick={() => handleEditClick(user)} className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded"><EditIcon className="w-4 h-4"/></button>
-                                                    <button onClick={() => handleDeleteClick(user.id)} className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><TrashIcon className="w-4 h-4"/></button>
-                                                </div>
+                                                {/* 👇 Chỉ hiện nút Sửa/Xóa nếu có quyền */}
+                                                {canManage && (
+                                                    <div className="flex items-center space-x-2">
+                                                        <button onClick={() => handleEditClick(user)} className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded"><EditIcon className="w-4 h-4"/></button>
+                                                        <button onClick={() => handleDeleteClick(user.id)} className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><TrashIcon className="w-4 h-4"/></button>
+                                                    </div>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}
@@ -233,14 +231,16 @@ const UsersTab = () => {
                     </div>
                 </div>
 
-                {/* CỘT PHẢI: FORM */}
-                <UserForm 
-                    key={editingUser ? editingUser.id : 'create'} 
-                    initialData={editingUser} 
-                    roles={Object.keys(localPermissions).length > 0 ? Object.keys(localPermissions) : DEFAULT_ROLES} 
-                    onSubmit={editingUser ? handleUpdateUser : handleCreateUser} 
-                    onCancel={editingUser ? handleCancelEdit : null} 
-                />
+                {/* CỘT PHẢI: FORM (Ẩn nếu không có quyền) */}
+                {canManage && (
+                    <UserForm 
+                        key={editingUser ? editingUser.id : 'create'} 
+                        initialData={editingUser} 
+                        roles={Object.keys(localPermissions).length > 0 ? Object.keys(localPermissions) : DEFAULT_ROLES} 
+                        onSubmit={editingUser ? handleUpdateUser : handleCreateUser} 
+                        onCancel={editingUser ? handleCancelEdit : null} 
+                    />
+                )}
             </div>
             {userToDelete && <ConfirmationModal message="Bạn có chắc muốn xóa tài khoản này?" onConfirm={confirmDelete} onCancel={cancelDelete}/>}
         </div>

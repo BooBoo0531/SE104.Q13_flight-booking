@@ -44,7 +44,8 @@ const AirplaneForm = ({ initialData, onSubmit, onCancel }) => {
     );
 };
 
-const AirplanesList = ({ airplanes, onEdit, onCreate, onDelete }) => {
+// 👇 Nhận prop canManage để ẩn hiện nút thao tác
+const AirplanesList = ({ airplanes, onEdit, onCreate, onDelete, canManage }) => {
     const [searchTerm, setSearchTerm] = useState('');
     
     const safeList = Array.isArray(airplanes) ? airplanes : [];
@@ -63,18 +64,38 @@ const AirplanesList = ({ airplanes, onEdit, onCreate, onDelete }) => {
                     <input type="text" placeholder="Tìm mã hoặc tên máy bay..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 </div>
-                <button onClick={onCreate} className="bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600 transition-all shadow flex items-center space-x-2"><PlusCircleIcon className="w-5 h-5"/><span>Tạo mới</span></button>
+                {/* 👇 Chỉ hiện nút Tạo mới nếu có quyền */}
+                {canManage && (
+                    <button onClick={onCreate} className="bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600 transition-all shadow flex items-center space-x-2"><PlusCircleIcon className="w-5 h-5"/><span>Tạo mới</span></button>
+                )}
             </div>
             <div className="overflow-x-auto bg-white rounded shadow">
                 <table className="w-full text-left">
-                    <thead className="bg-gray-50 border-b"><tr><th className="p-4 font-semibold text-gray-600">Số hiệu (Code)</th><th className="p-4 font-semibold text-gray-600">Tên máy bay</th><th className="p-4 font-semibold text-gray-600">Số lượng ghế</th><th className="p-4 font-semibold text-gray-600 text-center">Thao tác</th></tr></thead>
+                    <thead className="bg-gray-50 border-b">
+                        <tr>
+                            <th className="p-4 font-semibold text-gray-600">Số hiệu (Code)</th>
+                            <th className="p-4 font-semibold text-gray-600">Tên máy bay</th>
+                            <th className="p-4 font-semibold text-gray-600">Số lượng ghế</th>
+                            {/* 👇 Chỉ hiện cột Thao tác nếu có quyền */}
+                            {canManage && <th className="p-4 font-semibold text-gray-600 text-center">Thao tác</th>}
+                        </tr>
+                    </thead>
                     <tbody>
                         {filteredAirplanes.length > 0 ? filteredAirplanes.map(plane => (
                             <tr key={plane.id} className="border-b hover:bg-gray-50 transition-colors">
                                 <td className="p-4 font-mono text-blue-600 font-bold">{plane.code}</td>
                                 <td className="p-4 text-gray-800">{plane.name}</td>
                                 <td className="p-4 text-gray-800"><span className="bg-green-100 text-green-800 py-1 px-3 rounded-full text-xs font-bold">{plane.totalSeats}</span></td>
-                                <td className="p-4"><div className="flex justify-center items-center space-x-2"><button onClick={() => onEdit(plane)} className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-100 rounded-full transition"><EditIcon className="w-4 h-4"/></button><button onClick={() => onDelete(plane.id)} className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-100 rounded-full transition"><TrashIcon className="w-4 h-4"/></button></div></td>
+                                
+                                {/* 👇 Chỉ hiện nút Sửa/Xóa nếu có quyền */}
+                                {canManage && (
+                                    <td className="p-4">
+                                        <div className="flex justify-center items-center space-x-2">
+                                            <button onClick={() => onEdit(plane)} className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-100 rounded-full transition"><EditIcon className="w-4 h-4"/></button>
+                                            <button onClick={() => onDelete(plane.id)} className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-100 rounded-full transition"><TrashIcon className="w-4 h-4"/></button>
+                                        </div>
+                                    </td>
+                                )}
                             </tr>
                         )) : (
                             <tr><td colSpan="4" className="p-6 text-center text-gray-500">Chưa có dữ liệu.</td></tr>
@@ -92,6 +113,11 @@ const AirplanesTab = () => {
     const [editingAirplane, setEditingAirplane] = useState(null);
     const [airplaneToDelete, setAirplaneToDelete] = useState(null);
     const [loading, setLoading] = useState(false);
+
+    // 👇 LOGIC PHÂN QUYỀN
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    // Admin và Điều hành bay được quản lý. Ban giám đốc chỉ xem.
+    const canManage = ['Quản trị', 'Điều hành bay'].includes(user.role);
 
     const fetchAirplanes = async () => {
         setLoading(true);
@@ -156,15 +182,28 @@ const AirplanesTab = () => {
     const renderContent = () => {
         if (loading && subTab === 'list') return <div className="p-10 text-center">Đang tải dữ liệu...</div>;
         switch(subTab) {
-            case 'list': return <AirplanesList airplanes={airplanes} onCreate={handleCreateClick} onEdit={handleEditClick} onDelete={handleDeleteClick}/>;
-            case 'create': case 'edit': return <AirplaneForm initialData={editingAirplane} onSubmit={handleSave} onCancel={handleCancel} />;
+            // 👇 Truyền canManage xuống List
+            case 'list': return <AirplanesList airplanes={airplanes} onCreate={handleCreateClick} onEdit={handleEditClick} onDelete={handleDeleteClick} canManage={canManage}/>;
+            
+            // 👇 Chặn truy cập Form nếu không có quyền
+            case 'create': 
+                return canManage ? <AirplaneForm initialData={editingAirplane} onSubmit={handleSave} onCancel={handleCancel} /> : <div className="p-6 text-red-500">Bạn không có quyền thêm mới.</div>;
+            case 'edit': 
+                return canManage ? <AirplaneForm initialData={editingAirplane} onSubmit={handleSave} onCancel={handleCancel} /> : <div className="p-6 text-red-500">Bạn không có quyền chỉnh sửa.</div>;
             default: return null;
         }
     }
 
     return (
         <div>
-            <div className="px-6 pt-4 pb-2 border-b flex items-center justify-between bg-white"><div className="flex items-center space-x-2"><SubTabButton value="list">Danh sách máy bay</SubTabButton><SubTabButton value="create">Tạo máy bay mới</SubTabButton>{subTab === 'edit' && (<span className="px-6 py-2 rounded-full text-sm font-semibold bg-blue-600 text-white shadow animate-fade-in">Chi tiết máy bay</span>)}</div></div>
+            <div className="px-6 pt-4 pb-2 border-b flex items-center justify-between bg-white">
+                <div className="flex items-center space-x-2">
+                    <SubTabButton value="list">Danh sách máy bay</SubTabButton>
+                    {/* 👇 Ẩn nút tab Tạo mới nếu không có quyền */}
+                    {canManage && <SubTabButton value="create">Tạo máy bay mới</SubTabButton>}
+                    {subTab === 'edit' && (<span className="px-6 py-2 rounded-full text-sm font-semibold bg-blue-600 text-white shadow animate-fade-in">Chi tiết máy bay</span>)}
+                </div>
+            </div>
             <div className="bg-gray-50 min-h-[500px]">{renderContent()}</div>
             {airplaneToDelete && <ConfirmationModal message="Bạn có chắc muốn xóa máy bay này? Dữ liệu không thể phục hồi." onConfirm={confirmDelete} onCancel={cancelDelete}/>}
         </div>

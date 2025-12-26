@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../auth/AuthContext";
+import { useAuth } from "../auth/AuthContext"; 
+import axios from "axios";
 
 const PlaneTakeoff = (props) => (
   <svg
@@ -33,23 +34,36 @@ export default function AuthScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [notice, setNotice] = useState("");
-  const { login } = useAuth();
+  
+  // const { login } = useAuth(); // Tạm ẩn
   const navigate = useNavigate();
   const location = useLocation();
-  const redirectTo = location.state?.from?.pathname || "/";
+  const redirectTo = location.state?.from?.pathname || "/dashboard"; // Mặc định về Dashboard
 
+  // 👇 HÀM XỬ LÝ ĐĂNG NHẬP MỚI (QUAN TRỌNG)
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Gọi hàm login từ Context
-    const result = await login(email, password);
+    try {
+      // 1. Gọi API đăng nhập trực tiếp
+      const response = await axios.post('http://localhost:3000/auth/login', { 
+        email, 
+        password 
+      });
 
-    if (result.success) {
-      // Chỉ khi thành công mới chuyển trang
+      // 2. Lưu thông tin quan trọng vào localStorage
+      // Đây là bước quyết định để Dashboard biết bạn là ai (Admin/Nhân viên...)
+      localStorage.setItem('user', JSON.stringify(response.data.user)); 
+      localStorage.setItem('token', response.data.access_token);
+
+      // 3. Thông báo và chuyển hướng
+      alert("Đăng nhập thành công!");
       navigate(redirectTo, { replace: true });
-    } else {
-      // Nếu sai, hiển thị thông báo lỗi
-      alert(result.message);
+
+    } catch (error) {
+      console.error(error);
+      const msg = error.response?.data?.message || "Đăng nhập thất bại, vui lòng kiểm tra lại!";
+      alert(msg);
     }
   };
 
@@ -152,7 +166,7 @@ export default function AuthScreen() {
               <FormInput type="email" placeholder="Email" />
               <FormInput type="password" placeholder="Mật khẩu" />
               <button
-                onClick={handleSubmit}
+                onClick={() => alert("Chức năng đăng ký đang bảo trì (Vui lòng nhờ Admin tạo tài khoản)")}
                 className="w-full bg-green-500 text-white font-bold py-3 rounded-lg hover:bg-green-600 transition-all transform hover:scale-105 shadow-md hover:shadow-lg"
               >
                 Tạo tài khoản

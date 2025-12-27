@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { EditIcon, TrashIcon } from "../../components/common/Icons";
 import ConfirmationModal from "../../components/common/ConfirmationModal";
 
-// --- Sub-component: TicketForm ---
+// --- Sub-component: TicketForm (Giữ nguyên logic) ---
 const TicketForm = ({ initialData, flightForBooking, allFlights, allAirplanes, allTickets, onSubmit, onCancel }) => {
     const isEditMode = !!initialData;
     const [selectedFlight, setSelectedFlight] = useState(null);
@@ -102,7 +102,7 @@ const TicketForm = ({ initialData, flightForBooking, allFlights, allAirplanes, a
 };
 
 // --- Sub-component: LookupTicket ---
-const LookupTicket = ({ tickets, onEdit, onDelete }) => {
+const LookupTicket = ({ tickets, onEdit, onDelete, canBook }) => {
   const [mode, setMode] = useState('flightId');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState(tickets);
@@ -136,10 +136,13 @@ const LookupTicket = ({ tickets, onEdit, onDelete }) => {
                 <tr key={t.ticketId} className="border-b hover:bg-blue-50 transition">
                   <td className="p-3 font-mono text-green-700">{t.ticketId}</td><td className="p-3 font-mono text-blue-700">{t.flightId}</td><td className="p-3">{t.name}</td><td className="p-3">{t.idCard}</td><td className="p-3">{t.phone}</td><td className="p-3">{t.email}</td><td className="p-3 font-bold">{t.seat}</td><td className="p-3">{t.seatClass}</td><td className="p-3">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(t.price)}</td>
                   <td className="p-3">
-                    <div className="flex items-center space-x-1">
-                      <button onClick={() => onEdit(t)} className="p-1 text-gray-500 hover:text-green-600"><EditIcon className="w-4 h-4" /></button>
-                      <button onClick={() => onDelete(t.ticketId)} className="p-1 text-gray-500 hover:text-red-600"><TrashIcon className="w-4 h-4" /></button>
-                    </div>
+                    {/* 👇 Chỉ hiện nút Sửa/Xóa nếu có quyền Book */}
+                    {canBook && (
+                        <div className="flex items-center space-x-1">
+                        <button onClick={() => onEdit(t)} className="p-1 text-gray-500 hover:text-green-600"><EditIcon className="w-4 h-4" /></button>
+                        <button onClick={() => onDelete(t.ticketId)} className="p-1 text-gray-500 hover:text-red-600"><TrashIcon className="w-4 h-4" /></button>
+                        </div>
+                    )}
                   </td>
                 </tr>
               ))
@@ -153,11 +156,17 @@ const LookupTicket = ({ tickets, onEdit, onDelete }) => {
 
 // --- Main Export: TicketsTab ---
 const TicketsTab = ({ flightToBook, allFlights, allAirplanes, onCreateTicket, onUpdateTicket, onDeleteTicket, tickets }) => {
-    const [subTab, setSubTab] = useState('create');
+    // 👇 LOGIC PHÂN QUYỀN
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    // Admin và Nhân viên bán vé được phép đặt vé. Ban giám đốc chỉ Tra cứu.
+    const canBook = ['Quản trị', 'Nhân viên'].includes(user.role);
+
+    // Nếu không có quyền Book thì mặc định vào tab tra cứu, ngược lại vào tạo mới
+    const [subTab, setSubTab] = useState(canBook ? 'create' : 'lookup');
     const [editingTicket, setEditingTicket] = useState(null);
     const [ticketToDelete, setTicketToDelete] = useState(null);
     
-    useEffect(() => { if (flightToBook) { setSubTab('create'); setEditingTicket(null); } }, [flightToBook]);
+    useEffect(() => { if (flightToBook && canBook) { setSubTab('create'); setEditingTicket(null); } }, [flightToBook, canBook]);
 
     const handleEditClick = (ticket) => { setEditingTicket(ticket); setSubTab('edit'); };
     const handleDeleteClick = (ticketId) => { setTicketToDelete(ticketId); };
@@ -173,9 +182,12 @@ const TicketsTab = ({ flightToBook, allFlights, allAirplanes, onCreateTicket, on
 
     const renderContent = () => {
         switch(subTab) {
-            case 'create': return <TicketForm allFlights={allFlights} allAirplanes={allAirplanes} allTickets={tickets} flightForBooking={flightToBook} onSubmit={handleFormSubmit} />;
-            case 'lookup': return <LookupTicket tickets={tickets} onEdit={handleEditClick} onDelete={handleDeleteClick}/>;
-            case 'edit': return <TicketForm initialData={editingTicket} allFlights={allFlights} allAirplanes={allAirplanes} allTickets={tickets} onSubmit={handleFormSubmit} onCancel={handleCancelEdit} />;
+            case 'create': 
+                return canBook ? <TicketForm allFlights={allFlights} allAirplanes={allAirplanes} allTickets={tickets} flightForBooking={flightToBook} onSubmit={handleFormSubmit} /> : null;
+            case 'lookup': 
+                return <LookupTicket tickets={tickets} onEdit={handleEditClick} onDelete={handleDeleteClick} canBook={canBook}/>;
+            case 'edit': 
+                return canBook ? <TicketForm initialData={editingTicket} allFlights={allFlights} allAirplanes={allAirplanes} allTickets={tickets} onSubmit={handleFormSubmit} onCancel={handleCancelEdit} /> : null;
             default: return null;
         }
     }
@@ -184,9 +196,10 @@ const TicketsTab = ({ flightToBook, allFlights, allAirplanes, onCreateTicket, on
          <div>
             <div className="px-6 pt-4 pb-2 border-b flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                    <SubTabButton value="create">Tạo vé máy bay</SubTabButton>
+                    {/* 👇 Chỉ hiện tab Tạo vé nếu có quyền */}
+                    {canBook && <SubTabButton value="create">Tạo vé máy bay</SubTabButton>}
                     <SubTabButton value="lookup">Tra cứu</SubTabButton>
-                     {subTab === 'edit' && (<span className="px-6 py-2 rounded-full text-sm font-semibold bg-blue-600 text-white shadow animate-fade-in">Chỉnh sửa vé</span>)}
+                    {subTab === 'edit' && (<span className="px-6 py-2 rounded-full text-sm font-semibold bg-blue-600 text-white shadow animate-fade-in">Chỉnh sửa vé</span>)}
                 </div>
             </div>
             <div>{renderContent()}</div>

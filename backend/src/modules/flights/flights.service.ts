@@ -1,85 +1,121 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { Flight } from './entities/flight.entity';
-import { Setting } from '../settings/entities/setting.entity'; // Import Setting
+import { Setting } from '../settings/entities/setting.entity';
 import { CreateFlightDto } from './dto/create-flight.dto';
+import { UpdateFlightDto } from './dto/update-flight.dto';
 
 @Injectable()
 export class FlightsService {
   constructor(
     @InjectRepository(Flight)
-    private flightRepo: Repository<Flight>,
-
-    // 👇 Inject Setting Repo để đọc bảng tham số
+    private readonly flightRepo: Repository<Flight>,
     @InjectRepository(Setting)
-    private settingRepo: Repository<Setting>,
+    private readonly settingRepo: Repository<Setting>,
   ) {}
 
-  // --- 1. TẠO CHUYẾN BAY (FULL LOGIC) ---
   async create(dto: CreateFlightDto) {
-    // 👇 Ép kiểu sang 'any' để tránh lỗi TypeScript nếu file DTO của bạn chưa cập nhật kịp
-    const input = dto as any; 
-
-    // A. Lấy quy định từ Database (ID = 1)
     const settings = await this.settingRepo.findOne({ where: { id: 1 } });
-    
-    // Nếu chưa seed bảng Setting thì dùng giá trị mặc định (30 phút)
     const minFlightTime = settings ? settings.minFlightTime : 30;
 
-    // B. Tính toán thời gian bay
-    // Input từ Frontend thường là string ISO, cần chuyển sang Date
-    const startTime = new Date(input.startTime);
-    const endTime = new Date(input.endTime);
-
-    // Kiểm tra logic thời gian: Ngày về phải sau ngày đi
+    const startTime = new Date(dto.startTime);
+    const endTime = new Date(dto.endTime);
     if (endTime.getTime() <= startTime.getTime()) {
-      throw new BadRequestException('Lỗi: Thời gian hạ cánh phải sau thời gian cất cánh!');
-    }
-
-    // Tính thời lượng (phút) = (Hiệu số milisecond) / 60000
-    const duration = (endTime.getTime() - startTime.getTime()) / 60000;
-
-    // C. KIỂM TRA RÀNG BUỘC (QUY ĐỊNH)
-    if (duration < minFlightTime) {
       throw new BadRequestException(
-        `Vi phạm quy định: Thời gian bay quá ngắn (${Math.floor(duration)} phút). Tối thiểu phải là ${minFlightTime} phút.`
+        'Lỗi: Thời gian hạ cánh phải sau thời gian cất cánh!',
       );
     }
 
-    // D. Chuẩn bị dữ liệu để lưu vào Database
-    // ⚠️ QUAN TRỌNG: TypeORM cần object { id: ... } cho các quan hệ, nhưng FE gửi lên chỉ là số ID
-    const newFlight = this.flightRepo.create({
-      ...input, // Copy các trường cơ bản (flightCode, price...)
-      
-      duration: duration, 
-      availableSeats: input.totalSeats, // Mặc định ghế trống = tổng ghế
-      
-      // 👇 MAP ID SANG RELATION OBJECT
-      plane: input.planeId ? { id: input.planeId } : undefined,
-      fromAirport: input.fromAirportId ? { id: input.fromAirportId } : undefined,
-      toAirport: input.toAirportId ? { id: input.toAirportId } : undefined,
-    });
+    const duration = (endTime.getTime() - startTime.getTime()) / 60000;
+    if (duration < minFlightTime) {
+      throw new BadRequestException(
+        `Vi phạm quy định: Thời gian bay quá ngắn (${Math.floor(
+          duration,
+        )} phút). Tối thiểu phải là ${minFlightTime} phút.`,
+      );
+    }
 
+    const newFlight = this.flightRepo.create({
+      ...dto,
+      duration,
+      availableSeats: dto.totalSeats,
+      plane: dto.planeId ? ({ id: dto.planeId } as any) : undefined,
+      fromAirport: dto.fromAirportId ? ({ id: dto.fromAirportId } as any) : undefined,
+      toAirport: dto.toAirportId ? ({ id: dto.toAirportId } as any) : undefined,
+    });
     return await this.flightRepo.save(newFlight);
   }
 
-  // --- 2. LẤY DANH SÁCH (KÈM QUAN HỆ) ---
   async findAll() {
     return await this.flightRepo.find({
-      // 👇 Quan trọng: Lấy kèm thông tin để Frontend hiển thị tên Sân bay/Máy bay thay vì số ID
-      relations: ['plane', 'fromAirport', 'toAirport'], 
-      order: {
-        startTime: 'ASC', // Sắp xếp ngày gần nhất lên đầu
-      },
+      relations: ['plane', 'fromAirport', 'toAirport'],
+      order: { startTime: 'ASC' },
     });
   }
 
-  // --- 3. LẤY CHI TIẾT 1 CHUYẾN ---
   async findOne(id: number) {
     return await this.flightRepo.findOne({
       where: { id },
       relations: ['plane', 'fromAirport', 'toAirport', 'tickets'],
     });
+  }
+
+  async update(id: number, dto: UpdateFlightDto) {
+    const flight = await this.flightRepo.findOne({ where: { id } });
+    if (!flight) throw new BadRequestException('Không tìm thấy chuyến bay');
+
+    if (dto.startTime && dto.endTime) {
+      const startTime = new Date(dto.startTime);
+      const endTime = new Date(dto.endTime);
+      if (endTime.getTime() <= startTime.getTime()) {
+        throw new BadRequestException(
+          'Thời gian hạ cánh phải sau thời gian cất cánh!',
+        );
+      }
+      const duration = (endTime.getTime() - startTime.getTime()) / 60000;
+      const settings = await this.settingRepo.findOne({ where: { id: 1 } });
+      const minFlightTime = settings ? settings.minFlightTime : 30;
+      if (duration < minFlightTime) {
+        throw new BadRequestException(
+          `Thời gian bay quá ngắn (${Math.floor(
+            duration,
+          )} phút). Tối thiểu: ${minFlightTime} phút.`,
+        );
+      }
+      dto.duration = duration;
+    }
+
+    const ticketsSold = flight.totalSeats - flight.availableSeats;
+
+    Object.assign(flight, {
+      ...dto,
+      plane: dto.planeId ? ({ id: dto.planeId } as any) : flight.plane,
+      fromAirport: dto.fromAirportId
+        ? ({ id: dto.fromAirportId } as any)
+        : flight.fromAirport,
+      toAirport: dto.toAirportId
+        ? ({ id: dto.toAirportId } as any)
+        : flight.toAirport,
+    });
+
+    if (dto.totalSeats !== undefined) {
+      flight.availableSeats = dto.totalSeats - ticketsSold;
+    }
+
+    return await this.flightRepo.save(flight);
+  }
+
+  async remove(id: number) {
+    const flight = await this.flightRepo.findOne({
+      where: { id },
+      relations: ['tickets'],
+    });
+    if (!flight) throw new BadRequestException('Không tìm thấy chuyến bay');
+    if (flight.tickets && flight.tickets.length > 0) {
+      throw new BadRequestException('Không thể xóa chuyến bay đã có vé được đặt');
+    }
+    await this.flightRepo.remove(flight);
+    return { message: 'Xóa chuyến bay thành công' };
   }
 }

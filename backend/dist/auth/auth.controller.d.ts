@@ -18,6 +18,11 @@ export declare class AuthController {
     }): Promise<{
         message: string;
     }>;
+    resetPassword(token: string, body: {
+        password: string;
+    }): Promise<{
+        message: string;
+    }>;
     resetAdminPassword(): Promise<{
         message: string;
     }>;

@@ -7,6 +7,9 @@ export declare class Ticket {
     seatClass: string;
     price: number;
     passengerName: string;
+    idCard?: string;
+    phone?: string;
+    email?: string;
     flight: Flight;
-    booking: Booking;
+    booking: Booking | null;
 }

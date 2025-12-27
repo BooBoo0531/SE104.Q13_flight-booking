@@ -1,4 +1,4 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Param } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
 @Controller('auth')
@@ -13,6 +13,14 @@ export class AuthController {
   @Post('forgot-password')
   forgotPassword(@Body() body: { email: string }) {
     return this.authService.forgotPassword(body.email);
+  }
+
+  @Post('reset-password/:token')
+  resetPassword(
+    @Param('token') token: string,
+    @Body() body: { password: string },
+  ) {
+    return this.authService.resetPassword(token, body.password);
   }
 
   @Post('reset-admin-password')

@@ -1,4 +1,10 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Flight } from '../../flights/entities/flight.entity';
 import { Booking } from '../../bookings/entities/booking.entity';
 
@@ -22,11 +28,22 @@ export class Ticket {
   @Column({ name: 'TenHanhKhach' })
   passengerName: string;
 
-  @ManyToOne(() => Flight, (flight) => flight.tickets)
+  // ✅ Thêm 3 field theo UI Vé máy bay
+  @Column({ name: 'CCCD', nullable: true })
+  idCard?: string;
+
+  @Column({ name: 'SoDienThoai', nullable: true })
+  phone?: string;
+
+  @Column({ name: 'Email', nullable: true })
+  email?: string;
+
+  @ManyToOne(() => Flight, (flight) => flight.tickets, { nullable: false })
   @JoinColumn({ name: 'MaChuyenBay' })
   flight: Flight;
 
-  @ManyToOne(() => Booking, (booking) => booking.tickets)
+  // Cho phép null vì admin tạo vé trực tiếp không cần phiếu đặt
+  @ManyToOne(() => Booking, (booking) => booking.tickets, { nullable: true })
   @JoinColumn({ name: 'MaPhieuDat' })
-  booking: Booking;
+  booking: Booking | null;
 }

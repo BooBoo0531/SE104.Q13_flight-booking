@@ -20,6 +20,9 @@ let Ticket = class Ticket {
     seatClass;
     price;
     passengerName;
+    idCard;
+    phone;
+    email;
     flight;
     booking;
 };
@@ -49,14 +52,26 @@ __decorate([
     __metadata("design:type", String)
 ], Ticket.prototype, "passengerName", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => flight_entity_1.Flight, (flight) => flight.tickets),
+    (0, typeorm_1.Column)({ name: 'CCCD', nullable: true }),
+    __metadata("design:type", String)
+], Ticket.prototype, "idCard", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'SoDienThoai', nullable: true }),
+    __metadata("design:type", String)
+], Ticket.prototype, "phone", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'Email', nullable: true }),
+    __metadata("design:type", String)
+], Ticket.prototype, "email", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => flight_entity_1.Flight, (flight) => flight.tickets, { nullable: false }),
     (0, typeorm_1.JoinColumn)({ name: 'MaChuyenBay' }),
     __metadata("design:type", flight_entity_1.Flight)
 ], Ticket.prototype, "flight", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => booking_entity_1.Booking, (booking) => booking.tickets),
+    (0, typeorm_1.ManyToOne)(() => booking_entity_1.Booking, (booking) => booking.tickets, { nullable: true }),
     (0, typeorm_1.JoinColumn)({ name: 'MaPhieuDat' }),
-    __metadata("design:type", booking_entity_1.Booking)
+    __metadata("design:type", Object)
 ], Ticket.prototype, "booking", void 0);
 exports.Ticket = Ticket = __decorate([
     (0, typeorm_1.Entity)({ name: 'VE' })

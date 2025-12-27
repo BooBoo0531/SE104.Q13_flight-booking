@@ -2,11 +2,11 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import axios from "axios";
+import { getFlights, createFlight, updateFlight, deleteFlight, getAirports, getAirplanes } from "../services/api";
 
-// Import Layout
 import Header from "../layouts/Header";
+import Sidebar from "../layouts/Sidebar";
 
-// Import Features
 import FlightsTab from "../features/flights/FlightsTab";
 import TicketsTab from "../features/tickets/TicketsTab";
 import ReportsTab from "../features/reports/ReportsTab";
@@ -17,13 +17,13 @@ import SettingsTab from "../features/settings/SettingsTab";
 export default function DashboardScreen() {
   const navigate = useNavigate();
   const { logout } = useAuth();
-  
-  // State quản lý Tab động
+  // --- STATE GIAO DIỆN ---
   const [allowedTabs, setAllowedTabs] = useState([]); 
   const [activeTab, setActiveTab] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // --- STATE DỮ LIỆU (GIỮ NGUYÊN) ---
+  // --- STATE DỮ LIỆU ---
   const [flights, setFlights] = useState([]); 
   const [tickets, setTickets] = useState([]); 
   const [airplanes, setAirplanes] = useState([]); 
@@ -42,14 +42,12 @@ export default function DashboardScreen() {
   const [permissions, setPermissions] = useState({});
   const [flightToBook, setFlightToBook] = useState(null);
 
-  // 👇 SỬA ĐỔI QUAN TRỌNG: Check đăng nhập an toàn & Load quyền
   useEffect(() => {
     const initDashboard = async () => {
         // 1. Kiểm tra User trong LocalStorage
         const storedUser = localStorage.getItem('user');
         const storedToken = localStorage.getItem('token');
 
-        // Nếu thiếu thông tin -> Đá về trang chủ bằng href để load lại từ đầu
         if (!storedUser || !storedToken) {
             window.location.href = '/'; 
             return;
@@ -59,7 +57,6 @@ export default function DashboardScreen() {
         try {
             currentUser = JSON.parse(storedUser);
         } catch (error) {
-            // Nếu dữ liệu lỗi -> Xóa sạch và đá về login
             localStorage.clear();
             window.location.href = '/';
             return;
@@ -85,7 +82,6 @@ export default function DashboardScreen() {
 
                 setAllowedTabs(tabsToShow);
 
-                // Mặc định chọn tab đầu tiên
                 if (tabsToShow.length > 0) {
                     setActiveTab(tabsToShow[0]);
                 }
@@ -100,9 +96,83 @@ export default function DashboardScreen() {
     };
 
     initDashboard();
-  }, []); // Bỏ dependency navigate để tránh loop
+  }, []);
 
-  // --- HANDLERS (GIỮ NGUYÊN TOÀN BỘ CODE CỦA BẠN) ---
+  // Load flights và airports từ API
+  useEffect(() => {
+    const loadData = async () => {
+      if (allowedTabs.length === 0) return; // Chờ init dashboard xong
+      
+      try {
+        setLoading(true);
+        
+        // Load flights, airports và airplanes song song từ API
+        const [flightsData, airportsData, airplanesData] = await Promise.all([
+          getFlights(),
+          getAirports(),
+          getAirplanes()
+        ]);
+        
+        // Format flights data từ backend sang frontend format
+        const formattedFlights = flightsData.map(flight => ({
+          id: flight.flightCode,
+          backendId: flight.id, // Lưu ID backend để update/delete
+          fromAirport: flight.fromAirport.name,
+          fromCity: flight.fromAirport.city,
+          toAirport: flight.toAirport.name,
+          toCity: flight.toAirport.city,
+          date: new Date(flight.startTime).toISOString().split('T')[0],
+          time: `${new Date(flight.startTime).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})}-${new Date(flight.endTime).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})}`,
+          seatsEmpty: flight.availableSeats,
+          seatsTaken: flight.totalSeats - flight.availableSeats,
+          planeId: flight.plane.code,
+          price: flight.price,
+          duration: flight.duration,
+          status: flight.status,
+          // Thêm các field cần thiết cho form
+          hour: new Date(flight.startTime).getHours(),
+          minute: new Date(flight.startTime).getMinutes(),
+          businessSeats: flight.plane.businessSeats,
+          economySeats: flight.plane.economySeats,
+          intermediateAirports: [] // TODO: Load từ API nếu có
+        }));
+        
+        // Format airports data
+        const formattedAirports = airportsData.map(airport => ({
+          id: airport.id,
+          name: airport.name,
+          code: airport.code,
+          city: airport.city,
+          country: airport.country
+        }));
+        
+        // Format airplanes data
+        const formattedAirplanes = airplanesData.map(plane => ({
+          id: plane.code,
+          backendId: plane.id,
+          name: plane.name,
+          code: plane.code,
+          totalSeats: plane.totalSeats,
+          businessSeats: plane.businessSeats,
+          economySeats: plane.economySeats
+        }));
+        
+        setFlights(formattedFlights);
+        setAirports(formattedAirports);
+        setAirplanes(formattedAirplanes);
+        setError(null);
+      } catch (err) {
+        console.error('Lỗi tải dữ liệu:', err);
+        setError('Không thể tải dữ liệu. Vui lòng thử lại.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadData();
+  }, [allowedTabs]); 
+
+
   const calculateFlightTime = (hourStr, minuteStr, durationStr) => {
       const hour = parseInt(hourStr, 10), minute = parseInt(minuteStr, 10), duration = parseInt(durationStr, 10);
       if (isNaN(hour) || isNaN(minute) || isNaN(duration)) return 'N/A';
@@ -113,25 +183,168 @@ export default function DashboardScreen() {
       return `${departureTime}-${arrivalTime}`;
   };
 
-  const handleUpdateFlight = (updatedFlight) => {
-      const timeString = calculateFlightTime(updatedFlight.hour, updatedFlight.minute, updatedFlight.duration);
-      const plane = airplanes.find(p => p.id === updatedFlight.planeId);
-      const totalSeats = plane ? plane.totalSeats : (parseInt(updatedFlight.businessSeats, 10) || 0) + (parseInt(updatedFlight.economySeats, 10) || 0);
-      const seatsTaken = updatedFlight.seatsTaken || 0;
-      const seatsEmpty = totalSeats - seatsTaken;
-      const finalUpdatedFlight = { ...updatedFlight, time: timeString, seatsEmpty, seatsTaken, businessSeats: plane?.businessSeats, economySeats: plane?.economySeats };
-      setFlights(flights.map(f => f.id === finalUpdatedFlight.id ? finalUpdatedFlight : f));
+  const handleUpdateFlight = async (updatedFlight) => {
+      try {
+
+        const plane = airplanes.find(p => p.id === updatedFlight.planeId);
+        const fromAirport = airports.find(a => a.name === updatedFlight.fromAirport);
+        const toAirport = airports.find(a => a.name === updatedFlight.toAirport);
+        
+        if (!plane || !fromAirport || !toAirport) {
+          alert('Vui lòng chọn đầy đủ sân bay và máy bay!');
+          return;
+        }
+        
+        const startTime = new Date(`${updatedFlight.date}T${String(updatedFlight.hour).padStart(2, '0')}:${String(updatedFlight.minute).padStart(2, '0')}:00`);
+        const endTime = new Date(startTime.getTime() + parseInt(updatedFlight.duration) * 60000);
+        
+        const backendData = {
+          flightCode: updatedFlight.id, 
+          fromAirportId: fromAirport.id,
+          toAirportId: toAirport.id,
+          planeId: plane.backendId,
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
+          price: parseInt(updatedFlight.price, 10),
+          totalSeats: plane.totalSeats
+        };
+        
+        // Gọi API update
+        const updated = await updateFlight(updatedFlight.backendId, backendData);
+        
+        // Reload danh sách flights
+        const flightsData = await getFlights();
+        const formattedFlights = flightsData.map(flight => ({
+          id: flight.flightCode,
+          backendId: flight.id,
+          fromAirport: flight.fromAirport.name,
+          fromCity: flight.fromAirport.city,
+          toAirport: flight.toAirport.name,
+          toCity: flight.toAirport.city,
+          date: new Date(flight.startTime).toISOString().split('T')[0],
+          time: `${new Date(flight.startTime).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})}-${new Date(flight.endTime).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})}`,
+          seatsEmpty: flight.availableSeats,
+          seatsTaken: flight.totalSeats - flight.availableSeats,
+          planeId: flight.plane.code,
+          price: flight.price,
+          duration: flight.duration,
+          status: flight.status,
+          hour: new Date(flight.startTime).getHours(),
+          minute: new Date(flight.startTime).getMinutes(),
+          businessSeats: flight.plane.businessSeats,
+          economySeats: flight.plane.economySeats,
+          intermediateAirports: []
+        }));
+        setFlights(formattedFlights);
+        alert('Cập nhật chuyến bay thành công!');
+      } catch (err) {
+        console.error('Lỗi cập nhật chuyến bay:', err);
+        alert(err.response?.data?.message || 'Không thể cập nhật chuyến bay');
+      }
   };
 
-  const handleCreateFlight = (newFlight) => {
-      const timeString = calculateFlightTime(newFlight.hour, newFlight.minute, newFlight.duration);
-      const plane = airplanes.find(p => p.id === newFlight.planeId);
-      const totalSeats = plane ? plane.totalSeats : (parseInt(newFlight.businessSeats, 10) || 0) + (parseInt(newFlight.economySeats, 10) || 0);
-      const flightWithId = { ...newFlight, time: timeString, id: `FL${Math.floor(1000 + Math.random() * 9000)}`, seatsEmpty: totalSeats, seatsTaken: 0, businessSeats: plane?.businessSeats, economySeats: plane?.economySeats };
-      setFlights([...flights, flightWithId]);
+  const handleCreateFlight = async (newFlight) => {
+      try {
+        // Chuyển đổi dữ liệu frontend sang backend format
+        const plane = airplanes.find(p => p.id === newFlight.planeId);
+        const fromAirport = airports.find(a => a.name === newFlight.fromAirport);
+        const toAirport = airports.find(a => a.name === newFlight.toAirport);
+        
+        if (!plane || !fromAirport || !toAirport) {
+          alert('Vui lòng chọn đầy đủ sân bay và máy bay!');
+          return;
+        }
+        
+        // Tạo datetime local (không dùng Z để tránh lệch múi giờ)
+        const startTime = new Date(`${newFlight.date}T${String(newFlight.hour).padStart(2, '0')}:${String(newFlight.minute).padStart(2, '0')}:00`);
+        const endTime = new Date(startTime.getTime() + parseInt(newFlight.duration) * 60000);
+        
+        // Generate flightCode tự động: VN + random 4 số
+        const flightCode = `VN${Math.floor(1000 + Math.random() * 9000)}`;
+        
+        const backendData = {
+          flightCode: flightCode,
+          fromAirportId: fromAirport.id,
+          toAirportId: toAirport.id,
+          planeId: plane.backendId,
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
+          price: parseInt(newFlight.price, 10),
+          totalSeats: plane.totalSeats
+        };
+        
+        // Gọi API create
+        await createFlight(backendData);
+        
+        // Reload danh sách flights
+        const flightsData = await getFlights();
+        const formattedFlights = flightsData.map(flight => ({
+          id: flight.flightCode,
+          backendId: flight.id,
+          fromAirport: flight.fromAirport.name,
+          fromCity: flight.fromAirport.city,
+          toAirport: flight.toAirport.name,
+          toCity: flight.toAirport.city,
+          date: new Date(flight.startTime).toISOString().split('T')[0],
+          time: `${new Date(flight.startTime).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})}-${new Date(flight.endTime).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})}`,
+          seatsEmpty: flight.availableSeats,
+          seatsTaken: flight.totalSeats - flight.availableSeats,
+          planeId: flight.plane.code,
+          price: flight.price,
+          duration: flight.duration,
+          status: flight.status,
+          hour: new Date(flight.startTime).getHours(),
+          minute: new Date(flight.startTime).getMinutes(),
+          businessSeats: flight.plane.businessSeats,
+          economySeats: flight.plane.economySeats,
+          intermediateAirports: []
+        }));
+        setFlights(formattedFlights);
+        alert('Tạo chuyến bay thành công!');
+      } catch (err) {
+        console.error('Lỗi tạo chuyến bay:', err);
+        alert(err.response?.data?.message || 'Không thể tạo chuyến bay');
+      }
   };
 
-  const handleDeleteFlight = (flightId) => { setFlights(flights.filter(f => f.id !== flightId)); };
+  const handleDeleteFlight = async (flightId) => {
+      try {
+        const flight = flights.find(f => f.id === flightId);
+        if (!flight) return;
+        
+        // Gọi API delete với backend ID
+        await deleteFlight(flight.backendId);
+        
+        // Reload danh sách flights
+        const flightsData = await getFlights();
+        const formattedFlights = flightsData.map(flight => ({
+          id: flight.flightCode,
+          backendId: flight.id,
+          fromAirport: flight.fromAirport.name,
+          fromCity: flight.fromAirport.city,
+          toAirport: flight.toAirport.name,
+          toCity: flight.toAirport.city,
+          date: new Date(flight.startTime).toISOString().split('T')[0],
+          time: `${new Date(flight.startTime).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})}-${new Date(flight.endTime).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'})}`,
+          seatsEmpty: flight.availableSeats,
+          seatsTaken: flight.totalSeats - flight.availableSeats,
+          planeId: flight.plane.code,
+          price: flight.price,
+          duration: flight.duration,
+          status: flight.status,
+          hour: new Date(flight.startTime).getHours(),
+          minute: new Date(flight.startTime).getMinutes(),
+          businessSeats: flight.plane.businessSeats,
+          economySeats: flight.plane.economySeats,
+          intermediateAirports: []
+        }));
+        setFlights(formattedFlights);
+        alert('Xóa chuyến bay thành công!');
+      } catch (err) {
+        console.error('Lỗi xóa chuyến bay:', err);
+        alert(err.response?.data?.message || 'Không thể xóa chuyến bay. Có thể đã có vé được đặt.');
+      }
+  };
   
   const handleBookTicket = (flight) => { setFlightToBook(flight); setActiveTab('Vé máy bay'); };
 
@@ -188,7 +401,7 @@ export default function DashboardScreen() {
   const renderTabContent = () => {
     switch(activeTab) {
       case 'Chuyến bay':
-        return <FlightsTab flights={flights} airports={airports} rules={rules} onEdit={handleUpdateFlight} onDelete={handleDeleteFlight} onCreate={handleCreateFlight} onBookTicket={handleBookTicket} />;
+        return <FlightsTab flights={flights} airports={airports} airplanes={airplanes} rules={rules} onEdit={handleUpdateFlight} onDelete={handleDeleteFlight} onCreate={handleCreateFlight} onBookTicket={handleBookTicket} />;
       case 'Vé máy bay':
         return <TicketsTab allFlights={flights} allAirplanes={airplanes} allTickets={tickets} flightToBook={flightToBook} onCreateTicket={handleCreateTicket} onUpdateTicket={handleUpdateTicket} onDeleteTicket={handleDeleteTicket} tickets={tickets} />;
       case 'Báo cáo':
@@ -209,19 +422,41 @@ export default function DashboardScreen() {
     window.location.href = '/'; 
   };
 
-  if (loading) return <div className="flex h-screen items-center justify-center">Đang tải dữ liệu...</div>;
+  if (loading) return (
+    <div className="flex h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
+      <div className="text-center">
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+        <p className="text-gray-600 font-medium">Đang tải dữ liệu...</p>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="w-screen h-screen flex flex-col bg-white overflow-hidden animate-fade-in">
-      <Header 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-        onLogout={handleLogout}
-        TABS={allowedTabs} 
+    <div className="w-screen h-screen flex bg-gray-100 overflow-hidden">
+      {/* Sidebar Navigation */}
+      <Sidebar 
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        TABS={allowedTabs}
       />
-      <main className="flex-1 bg-gray-50 overflow-y-auto">
-        {renderTabContent()}
-      </main>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <Header 
+          activeTab={activeTab}
+          onLogout={handleLogout}
+        />
+
+        {/* Content with fade-in animation */}
+        <main className="flex-1 overflow-y-auto bg-gradient-to-br from-gray-50 to-blue-50/30 p-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 animate-fade-in">
+              {renderTabContent()}
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

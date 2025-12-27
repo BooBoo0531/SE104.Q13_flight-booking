@@ -10,6 +10,7 @@ import { Setting } from './modules/settings/entities/setting.entity';
 import { Seat } from './modules/seats/entities/seat.entity';
 import { IntermediateAirport } from './modules/intermediate-airports/entities/intermediate-airport.entity';
 import { FlightTicketClass } from './modules/flight-ticket-classes/entities/flight-ticket-class.entity';
+import { RolePermission } from './modules/users/entities/role-permission.entity';
 
 import * as bcrypt from 'bcryptjs';
 
@@ -42,9 +43,25 @@ const hashPassword = async (plain: string) => {
 
 async function bootstrap() {
   console.log('🚀 Bắt đầu seed database...');
+  
+  // XÁC NHẬN XÓA DỮ LIỆU - Bỏ comment dòng dưới nếu muốn bỏ qua xác nhận
+  const readline = require('readline').createInterface({ input: process.stdin, output: process.stdout });
+  const shouldClear = await new Promise<boolean>(resolve => {
+    readline.question('⚠️  XÓA TẤT CẢ DỮ LIỆU? (yes/no): ', (answer: string) => {
+      readline.close();
+      resolve(answer.toLowerCase() === 'yes');
+    });
+  });
+  
+  if (!shouldClear) {
+    console.log('❌ Hủy seed - Dữ liệu được giữ nguyên');
+    return;
+  }
+  
   try {
     if (!AppDataSource.isInitialized) await AppDataSource.initialize();
 
+    console.log('🗑️  Xóa dữ liệu cũ...');
     const queryRunner = AppDataSource.createQueryRunner();
     const tables = [
       'VE', 'PHIEUDATCHO', 'CT_HANGVE', 'TRUNGGIAN', 
@@ -67,6 +84,7 @@ async function bootstrap() {
     const seatRepo = AppDataSource.getRepository(Seat);
     const interRepo = AppDataSource.getRepository(IntermediateAirport);
     const flightDetailRepo = AppDataSource.getRepository(FlightTicketClass);
+    const rolePermRepo = AppDataSource.getRepository(RolePermission);
 
     // 1. TẠO THAM SỐ
     await settingRepo.save({
@@ -76,6 +94,13 @@ async function bootstrap() {
     // 2. TẠO HẠNG VÉ
     const ecoClass = await classRepo.save({ name: 'Phổ thông', priceRatio: 1.0 });
     const bizClass = await classRepo.save({ name: 'Thương gia', priceRatio: 1.5 });
+
+    // 2.5 TẠO QUYỀN CHO CÁC VAI TRÒ
+    await rolePermRepo.save([
+      { role: 'admin', permissions: { ChuyenBay: true, VeChuyenBay: true, BaoCao: true, MayBay: true, TaiKhoan: true, CaiDat: true } },
+      { role: 'manager', permissions: { ChuyenBay: true, VeChuyenBay: false, BaoCao: true, MayBay: true, TaiKhoan: false, CaiDat: false } },
+      { role: 'staff', permissions: { ChuyenBay: false, VeChuyenBay: true, BaoCao: false, MayBay: false, TaiKhoan: false, CaiDat: false } },
+    ]);
 
     // 3. TẠO USER
     console.log('👥 Tạo Users...');
@@ -100,7 +125,8 @@ async function bootstrap() {
     }
 
     const customers: User[] = [];
-    for (let i = 0; i < 50; i++) {
+    // GIẢM TỪ 50 XUỐNG 30 KHÁCH HÀNG - đủ để test
+    for (let i = 0; i < 30; i++) {
       const name = generateName();
       const user = await userRepo.save({
         name,
@@ -136,7 +162,8 @@ async function bootstrap() {
     ];
     
     const planes: Airplane[] = [];
-    for (let i = 1; i <= 15; i++) {
+    // GIẢM XUỐNG 5 MÁY BAY
+    for (let i = 1; i <= 5; i++) {
       const type = getRandomItem(planesData);
       const totalRows = Math.ceil(type.seats / type.seatsPerRow);
       const bizSeatsCount = type.bizRows * type.seatsPerRow;
@@ -173,7 +200,9 @@ async function bootstrap() {
     const usedFlightCodes = new Set<string>();
     let globalBookingCounter = 0;
 
-    for (let i = 1; i <= 80; i++) {
+    // GIẢM XUỐNG 15 ĐỂ CHẠY NHANH
+    for (let i = 1; i <= 15; i++) {
+      if (i % 5 === 0) console.log(`   ⏳ Đang tạo chuyến bay ${i}/15...`);
       let from = getRandomItem(airports);
       let to = getRandomItem(airports);
       while (from.code === to.code) to = getRandomItem(airports);
@@ -285,13 +314,17 @@ async function bootstrap() {
           });
         }
 
-        // Batch insert bookings
+        // OPTIMIZED: Batch insert tất cả bookings cùng lúc
         if (bookingsBatch.length > 0) {
-          for (const bookingData of bookingsBatch) {
-            const tickets = bookingData.tickets;
-            delete bookingData.tickets;
-            
-            const savedBooking = await bookingRepo.save(bookingData);
+          const savedBookings = await bookingRepo.save(bookingsBatch.map(b => {
+            const { tickets, ...bookingData } = b;
+            return bookingData;
+          }));
+          
+          // Tạo tickets với booking đã save
+          for (let idx = 0; idx < bookingsBatch.length; idx++) {
+            const tickets = bookingsBatch[idx].tickets;
+            const savedBooking = savedBookings[idx];
             
             const ticketsToInsert = tickets.map((t: any) => ({
               ticketId: t.ticketId,
@@ -306,15 +339,16 @@ async function bootstrap() {
             ticketsBatch.push(...ticketsToInsert);
           }
           
-          // Batch insert all tickets at once
+          // OPTIMIZED: Insert tickets với chunk lớn hơn
           if (ticketsBatch.length > 0) {
-            const chunkSize = 100;
+            const chunkSize = 500; // Tăng từ 100 lên 500
             for (let k = 0; k < ticketsBatch.length; k += chunkSize) {
               await ticketRepo.save(ticketsBatch.slice(k, k + chunkSize));
             }
           }
         }
 
+        // OPTIMIZED: Cập nhật availableSeats một lần
         flight.availableSeats = Math.floor(flight.totalSeats - seatsSoldSoFar);
         await flightRepo.save(flight);
         await flightDetailRepo.update({ flight: { id: flight.id }, ticketClass: { id: bizClass.id } }, { soldSeats: bizSold });

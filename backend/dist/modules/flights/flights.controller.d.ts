@@ -7,4 +7,8 @@ export declare class FlightsController {
     adminRoute(): string;
     get(id: string): Promise<import("./entities/flight.entity").Flight | null>;
     create(dto: CreateFlightDto): Promise<import("./entities/flight.entity").Flight[]>;
+    update(id: string, dto: CreateFlightDto): Promise<import("./entities/flight.entity").Flight>;
+    remove(id: string): Promise<{
+        message: string;
+    }>;
 }

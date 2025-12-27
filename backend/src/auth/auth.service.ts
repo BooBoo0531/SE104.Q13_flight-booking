@@ -1,10 +1,12 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 
 import { User } from '../modules/users/entities/user.entity';
+import { EmailService } from './email.service';
 
 @Injectable()
 export class AuthService {
@@ -12,6 +14,7 @@ export class AuthService {
     @InjectRepository(User)
     private userRepo: Repository<User>,
     private jwtService: JwtService,
+    private emailService: EmailService,
   ) {}
 
   async login(email: string, password: string) {
@@ -43,22 +46,70 @@ export class AuthService {
       throw new UnauthorizedException('Email không tồn tại trong hệ thống');
     }
 
-    // 1. Tạo mật khẩu tạm (8 ký tự)
-    const tempPassword = Math.random().toString(36).slice(-8);
+    // Tạo reset token ngẫu nhiên
+    const resetToken = crypto.randomBytes(32).toString('hex');
     
-    // 2. Mã hóa và lưu vào Database
-    const salt = await bcrypt.genSalt();
-    user.password = await bcrypt.hash(tempPassword, salt);
+    // Hash token trước khi lưu vào database
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+
+    // Lưu token và thời gian hết hạn (15 phút)
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
     await this.userRepo.save(user);
 
-    // 3. Giả lập gửi Email: In ra log của Docker Terminal
-    console.log('\n==========================================');
-    console.log(`[HỆ THỐNG] Yêu cầu reset mật khẩu cho: ${email}`);
-    console.log(`[HỆ THỐNG] Mật khẩu mới là: ${tempPassword}`);
-    console.log('==========================================\n');
+    // Gửi email
+    try {
+      await this.emailService.sendResetPasswordEmail(email, resetToken);
+      return {
+        message: 'Email khôi phục mật khẩu đã được gửi. Vui lòng kiểm tra hộp thư của bạn.',
+      };
+    } catch (error) {
+      // Nếu gửi email thất bại, vẫn trả về thông báo cho dev
+      console.error('Error sending email:', error);
+      return {
+        message: 'Link khôi phục đã được tạo. Kiểm tra console để lấy link (DEV MODE).',
+      };
+    }
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    // Hash token từ URL
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+
+    // Tìm user với token hợp lệ và chưa hết hạn
+    const user = await this.userRepo.findOne({
+      where: {
+        resetPasswordToken: hashedToken,
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Token không hợp lệ hoặc đã hết hạn');
+    }
+
+    // Kiểm tra thời gian hết hạn (so sánh timestamp để tránh lỗi timezone)
+    if (!user.resetPasswordExpires || user.resetPasswordExpires.getTime() < Date.now()) {
+      throw new BadRequestException('Token đã hết hạn. Vui lòng yêu cầu link mới.');
+    }
+
+    // Đặt mật khẩu mới
+    const salt = await bcrypt.genSalt();
+    user.password = await bcrypt.hash(newPassword, salt);
+    
+    // Xóa reset token
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    
+    await this.userRepo.save(user);
 
     return {
-      message: 'Mật khẩu mới đã được cấp. Hãy kiểm tra với bộ phận kỹ thuật (Log Terminal)',
+      message: 'Mật khẩu đã được đặt lại thành công. Bạn có thể đăng nhập ngay bây giờ.',
     };
   }
 

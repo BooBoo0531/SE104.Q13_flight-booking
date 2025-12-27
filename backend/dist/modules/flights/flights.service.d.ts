@@ -9,4 +9,8 @@ export declare class FlightsService {
     create(dto: CreateFlightDto): Promise<Flight[]>;
     findAll(): Promise<Flight[]>;
     findOne(id: number): Promise<Flight | null>;
+    update(id: number, dto: CreateFlightDto): Promise<Flight>;
+    remove(id: number): Promise<{
+        message: string;
+    }>;
 }

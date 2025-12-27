@@ -12,6 +12,7 @@ import { Setting } from '../modules/settings/entities/setting.entity';
 import { IntermediateAirport } from '../modules/intermediate-airports/entities/intermediate-airport.entity';
 import { Seat } from '../modules/seats/entities/seat.entity';
 import { FlightTicketClass } from '../modules/flight-ticket-classes/entities/flight-ticket-class.entity';
+import { RolePermission } from '../modules/users/entities/role-permission.entity';
 
 dotenv.config();
 
@@ -42,7 +43,8 @@ export const AppDataSource = new DataSource({
     Setting,
     IntermediateAirport, 
     Seat,
-    FlightTicketClass
+    FlightTicketClass,
+    RolePermission
   ],
   
   migrations: [],

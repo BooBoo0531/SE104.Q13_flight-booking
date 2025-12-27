@@ -154,6 +154,22 @@ export default function AuthScreen() {
           background-size: 200% 200%;
           animation: gradientShift 15s ease infinite;
         }
+        /* Ẩn nút show/hide password mặc định của trình duyệt */
+        input[type="password"]::-ms-reveal,
+        input[type="password"]::-ms-clear {
+          display: none;
+        }
+        input[type="password"]::-webkit-credentials-auto-fill-button,
+        input[type="password"]::-webkit-contacts-auto-fill-button {
+          visibility: hidden;
+          pointer-events: none;
+          position: absolute;
+          right: 0;
+        }
+        input[type="text"]::-ms-reveal,
+        input[type="text"]::-ms-clear {
+          display: none;
+        }
       `}</style>
       
       <div className="w-full max-w-md">
@@ -202,12 +218,14 @@ export default function AuthScreen() {
                   placeholder="Mật khẩu"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
                   className="w-full pl-10 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center hover:opacity-70 transition-opacity"
+                  tabIndex="-1"
                 >
                   {showPassword ? <EyeOffIcon /> : <EyeIcon />}
                 </button>

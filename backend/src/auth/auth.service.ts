@@ -57,7 +57,7 @@ export class AuthService {
 
     // Lưu token và thời gian hết hạn (15 phút)
     user.resetPasswordToken = hashedToken;
-    user.resetPasswordExpires = new Date(Date.now() + 900000); // 15 minutes
+    user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
     await this.userRepo.save(user);
 
     // Gửi email
@@ -93,9 +93,9 @@ export class AuthService {
       throw new BadRequestException('Token không hợp lệ hoặc đã hết hạn');
     }
 
-    // Kiểm tra thời gian hết hạn
-    if (!user.resetPasswordExpires || user.resetPasswordExpires < new Date()) {
-      throw new BadRequestException('Token đã hết hạn');
+    // Kiểm tra thời gian hết hạn (so sánh timestamp để tránh lỗi timezone)
+    if (!user.resetPasswordExpires || user.resetPasswordExpires.getTime() < Date.now()) {
+      throw new BadRequestException('Token đã hết hạn. Vui lòng yêu cầu link mới.');
     }
 
     // Đặt mật khẩu mới

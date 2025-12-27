@@ -82,4 +82,75 @@ export class FlightsService {
       relations: ['plane', 'fromAirport', 'toAirport', 'tickets'],
     });
   }
+
+  // --- 4. CẬP NHẬT CHUYẾN BAY ---
+  async update(id: number, dto: CreateFlightDto) {
+    const input = dto as any;
+    
+    // Lấy chuyến bay hiện tại
+    const flight = await this.flightRepo.findOne({ where: { id } });
+    if (!flight) {
+      throw new BadRequestException('Không tìm thấy chuyến bay');
+    }
+
+    // Kiểm tra quy định nếu có thay đổi thời gian
+    if (input.startTime && input.endTime) {
+      const startTime = new Date(input.startTime);
+      const endTime = new Date(input.endTime);
+      
+      if (endTime.getTime() <= startTime.getTime()) {
+        throw new BadRequestException('Thời gian hạ cánh phải sau thời gian cất cánh!');
+      }
+
+      const duration = (endTime.getTime() - startTime.getTime()) / 60000;
+      const settings = await this.settingRepo.findOne({ where: { id: 1 } });
+      const minFlightTime = settings ? settings.minFlightTime : 30;
+
+      if (duration < minFlightTime) {
+        throw new BadRequestException(
+          `Thời gian bay quá ngắn (${Math.floor(duration)} phút). Tối thiểu: ${minFlightTime} phút.`
+        );
+      }
+
+      input.duration = duration;
+    }
+
+    // Tính số vé đã đặt (totalSeats cũ - availableSeats cũ)
+    const ticketsSold = flight.totalSeats - flight.availableSeats;
+    
+    // Update các trường
+    Object.assign(flight, {
+      ...input,
+      plane: input.planeId ? { id: input.planeId } : flight.plane,
+      fromAirport: input.fromAirportId ? { id: input.fromAirportId } : flight.fromAirport,
+      toAirport: input.toAirportId ? { id: input.toAirportId } : flight.toAirport,
+    });
+    
+    // Nếu thay đổi totalSeats (thường do đổi máy bay), cập nhật lại availableSeats
+    if (input.totalSeats !== undefined) {
+      flight.availableSeats = input.totalSeats - ticketsSold;
+    }
+
+    return await this.flightRepo.save(flight);
+  }
+
+  // --- 5. XÓA CHUYẾN BAY ---
+  async remove(id: number) {
+    const flight = await this.flightRepo.findOne({ 
+      where: { id },
+      relations: ['tickets']
+    });
+
+    if (!flight) {
+      throw new BadRequestException('Không tìm thấy chuyến bay');
+    }
+
+    // Kiểm tra xem đã có vé được đặt chưa
+    if (flight.tickets && flight.tickets.length > 0) {
+      throw new BadRequestException('Không thể xóa chuyến bay đã có vé được đặt');
+    }
+
+    await this.flightRepo.remove(flight);
+    return { message: 'Xóa chuyến bay thành công' };
+  }
 }

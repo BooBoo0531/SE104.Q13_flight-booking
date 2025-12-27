@@ -95,7 +95,7 @@ let AuthService = class AuthService {
             .update(resetToken)
             .digest('hex');
         user.resetPasswordToken = hashedToken;
-        user.resetPasswordExpires = new Date(Date.now() + 900000);
+        user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000);
         await this.userRepo.save(user);
         try {
             await this.emailService.sendResetPasswordEmail(email, resetToken);
@@ -123,8 +123,8 @@ let AuthService = class AuthService {
         if (!user) {
             throw new common_1.BadRequestException('Token không hợp lệ hoặc đã hết hạn');
         }
-        if (!user.resetPasswordExpires || user.resetPasswordExpires < new Date()) {
-            throw new common_1.BadRequestException('Token đã hết hạn');
+        if (!user.resetPasswordExpires || user.resetPasswordExpires.getTime() < Date.now()) {
+            throw new common_1.BadRequestException('Token đã hết hạn. Vui lòng yêu cầu link mới.');
         }
         const salt = await bcrypt.genSalt();
         user.password = await bcrypt.hash(newPassword, salt);

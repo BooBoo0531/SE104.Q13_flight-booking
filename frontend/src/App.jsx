@@ -4,6 +4,7 @@ import { AuthProvider } from "./auth/AuthContext";
 
 import AuthScreen from "./pages/AuthScreen"; 
 import DashboardScreen from "./pages/DashboardScreen";
+import ResetPasswordScreen from "./pages/ResetPasswordScreen";
 
 import "./index.css";
 
@@ -13,6 +14,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<AuthScreen />} />
+          <Route path="/reset-password/:token" element={<ResetPasswordScreen />} />
 
           <Route path="/dashboard" element={<DashboardScreen />} />
 

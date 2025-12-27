@@ -1,37 +1,47 @@
 import React from 'react';
-import { CloudIcon } from '../components/common/Icons';
 
-const Header = ({ activeTab, setActiveTab, onLogout, TABS }) => {
-  const Tab = ({ name }) => (
-    <button 
-      onClick={() => setActiveTab(name)} 
-      className={`px-4 h-10 flex items-center text-sm font-medium transition-colors border-b-2 ${activeTab === name ? 'text-blue-600 border-blue-600 bg-white' : 'text-gray-500 border-transparent hover:bg-gray-200 hover:text-gray-800'}`}
-    >
-      {name}
-    </button>
-  );
+const LogoutIcon = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <polyline points="16 17 21 12 16 7" />
+    <line x1="21" y1="12" x2="9" y2="12" />
+  </svg>
+);
 
+const Header = ({ onLogout, activeTab }) => {
   return (
-    <header className="flex items-center bg-gray-100 border-b pl-4 pr-2 shrink-0 h-16">
-      <div className="flex items-center space-x-2 mr-6">
-        <CloudIcon className="w-6 h-6 text-blue-500" />
-        <span className="font-bold text-gray-700">FlightManager</span>
-      </div>
+    <header className="bg-gradient-to-r from-white to-gray-50 border-b border-gray-200 shadow-sm">
+      <div className="h-16 px-6 flex items-center justify-between">
+        {/* Page Title */}
+        <div className="flex-1">
+          <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
+            {activeTab || 'Dashboard'}
+          </h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </p>
+        </div>
 
-      <nav className="flex-1 flex items-center overflow-x-auto no-scrollbar">
-        {TABS.map(tab => <Tab key={tab} name={tab} />)}
-      </nav>
-
-      <div className="flex items-center ml-4">
-        <button
-          onClick={onLogout}
-          className="flex items-center gap-1 px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 hover:text-red-800 transition whitespace-nowrap"
-        >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
+        {/* Actions */}
+        <div className="flex items-center space-x-4">
+          {/* Notifications - Optional for future */}
+          <button className="relative p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
             </svg>
-            <span>Đăng xuất</span>
-        </button>
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+          </button>
+
+          {/* Logout Button */}
+          <button
+            onClick={onLogout}
+            className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-lg hover:from-red-600 hover:to-pink-600 shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105"
+          >
+            <LogoutIcon className="w-4 h-4" />
+            <span className="font-medium text-sm">Đăng xuất</span>
+          </button>
+        </div>
       </div>
     </header>
   );

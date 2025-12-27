@@ -6,5 +6,7 @@ export declare class User {
     password: string;
     phone: string;
     role: string;
+    resetPasswordToken?: string | null;
+    resetPasswordExpires?: Date | null;
     bookings: Booking[];
 }

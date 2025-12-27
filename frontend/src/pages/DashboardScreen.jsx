@@ -5,6 +5,7 @@ import axios from "axios";
 
 // Import Layout
 import Header from "../layouts/Header";
+import Sidebar from "../layouts/Sidebar";
 
 // Import Features
 import FlightsTab from "../features/flights/FlightsTab";
@@ -42,14 +43,12 @@ export default function DashboardScreen() {
   const [permissions, setPermissions] = useState({});
   const [flightToBook, setFlightToBook] = useState(null);
 
-  // 👇 SỬA ĐỔI QUAN TRỌNG: Check đăng nhập an toàn & Load quyền
   useEffect(() => {
     const initDashboard = async () => {
         // 1. Kiểm tra User trong LocalStorage
         const storedUser = localStorage.getItem('user');
         const storedToken = localStorage.getItem('token');
 
-        // Nếu thiếu thông tin -> Đá về trang chủ bằng href để load lại từ đầu
         if (!storedUser || !storedToken) {
             window.location.href = '/'; 
             return;
@@ -59,7 +58,6 @@ export default function DashboardScreen() {
         try {
             currentUser = JSON.parse(storedUser);
         } catch (error) {
-            // Nếu dữ liệu lỗi -> Xóa sạch và đá về login
             localStorage.clear();
             window.location.href = '/';
             return;
@@ -85,7 +83,6 @@ export default function DashboardScreen() {
 
                 setAllowedTabs(tabsToShow);
 
-                // Mặc định chọn tab đầu tiên
                 if (tabsToShow.length > 0) {
                     setActiveTab(tabsToShow[0]);
                 }
@@ -100,9 +97,9 @@ export default function DashboardScreen() {
     };
 
     initDashboard();
-  }, []); // Bỏ dependency navigate để tránh loop
+  }, []); 
 
-  // --- HANDLERS (GIỮ NGUYÊN TOÀN BỘ CODE CỦA BẠN) ---
+
   const calculateFlightTime = (hourStr, minuteStr, durationStr) => {
       const hour = parseInt(hourStr, 10), minute = parseInt(minuteStr, 10), duration = parseInt(durationStr, 10);
       if (isNaN(hour) || isNaN(minute) || isNaN(duration)) return 'N/A';
@@ -209,19 +206,41 @@ export default function DashboardScreen() {
     window.location.href = '/'; 
   };
 
-  if (loading) return <div className="flex h-screen items-center justify-center">Đang tải dữ liệu...</div>;
+  if (loading) return (
+    <div className="flex h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
+      <div className="text-center">
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+        <p className="text-gray-600 font-medium">Đang tải dữ liệu...</p>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="w-screen h-screen flex flex-col bg-white overflow-hidden animate-fade-in">
-      <Header 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-        onLogout={handleLogout}
-        TABS={allowedTabs} 
+    <div className="w-screen h-screen flex bg-gray-100 overflow-hidden">
+      {/* Sidebar Navigation */}
+      <Sidebar 
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        TABS={allowedTabs}
       />
-      <main className="flex-1 bg-gray-50 overflow-y-auto">
-        {renderTabContent()}
-      </main>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <Header 
+          activeTab={activeTab}
+          onLogout={handleLogout}
+        />
+
+        {/* Content with fade-in animation */}
+        <main className="flex-1 overflow-y-auto bg-gradient-to-br from-gray-50 to-blue-50/30 p-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 animate-fade-in">
+              {renderTabContent()}
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

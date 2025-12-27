@@ -51,13 +51,17 @@ const jwt_1 = require("@nestjs/jwt");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const bcrypt = __importStar(require("bcryptjs"));
+const crypto = __importStar(require("crypto"));
 const user_entity_1 = require("../modules/users/entities/user.entity");
+const email_service_1 = require("./email.service");
 let AuthService = class AuthService {
     userRepo;
     jwtService;
-    constructor(userRepo, jwtService) {
+    emailService;
+    constructor(userRepo, jwtService, emailService) {
         this.userRepo = userRepo;
         this.jwtService = jwtService;
+        this.emailService = emailService;
     }
     async login(email, password) {
         const user = await this.userRepo.findOne({ where: { email } });
@@ -85,16 +89,50 @@ let AuthService = class AuthService {
         if (!user) {
             throw new common_1.UnauthorizedException('Email không tồn tại trong hệ thống');
         }
-        const tempPassword = Math.random().toString(36).slice(-8);
-        const salt = await bcrypt.genSalt();
-        user.password = await bcrypt.hash(tempPassword, salt);
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const hashedToken = crypto
+            .createHash('sha256')
+            .update(resetToken)
+            .digest('hex');
+        user.resetPasswordToken = hashedToken;
+        user.resetPasswordExpires = new Date(Date.now() + 900000);
         await this.userRepo.save(user);
-        console.log('\n==========================================');
-        console.log(`[HỆ THỐNG] Yêu cầu reset mật khẩu cho: ${email}`);
-        console.log(`[HỆ THỐNG] Mật khẩu mới là: ${tempPassword}`);
-        console.log('==========================================\n');
+        try {
+            await this.emailService.sendResetPasswordEmail(email, resetToken);
+            return {
+                message: 'Email khôi phục mật khẩu đã được gửi. Vui lòng kiểm tra hộp thư của bạn.',
+            };
+        }
+        catch (error) {
+            console.error('Error sending email:', error);
+            return {
+                message: 'Link khôi phục đã được tạo. Kiểm tra console để lấy link (DEV MODE).',
+            };
+        }
+    }
+    async resetPassword(token, newPassword) {
+        const hashedToken = crypto
+            .createHash('sha256')
+            .update(token)
+            .digest('hex');
+        const user = await this.userRepo.findOne({
+            where: {
+                resetPasswordToken: hashedToken,
+            },
+        });
+        if (!user) {
+            throw new common_1.BadRequestException('Token không hợp lệ hoặc đã hết hạn');
+        }
+        if (!user.resetPasswordExpires || user.resetPasswordExpires < new Date()) {
+            throw new common_1.BadRequestException('Token đã hết hạn');
+        }
+        const salt = await bcrypt.genSalt();
+        user.password = await bcrypt.hash(newPassword, salt);
+        user.resetPasswordToken = null;
+        user.resetPasswordExpires = null;
+        await this.userRepo.save(user);
         return {
-            message: 'Mật khẩu mới đã được cấp. Hãy kiểm tra với bộ phận kỹ thuật (Log Terminal)',
+            message: 'Mật khẩu đã được đặt lại thành công. Bạn có thể đăng nhập ngay bây giờ.',
         };
     }
     async resetAdminPassword() {
@@ -113,6 +151,7 @@ exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
-        jwt_1.JwtService])
+        jwt_1.JwtService,
+        email_service_1.EmailService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

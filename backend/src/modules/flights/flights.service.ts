@@ -2,7 +2,8 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Flight } from './entities/flight.entity';
-import { Setting } from '../settings/entities/setting.entity'; // Import Setting
+import { Setting } from '../settings/entities/setting.entity';
+import { IntermediateAirport } from '../intermediate-airports/entities/intermediate-airport.entity';
 import { CreateFlightDto } from './dto/create-flight.dto';
 
 @Injectable()
@@ -11,94 +12,139 @@ export class FlightsService {
     @InjectRepository(Flight)
     private flightRepo: Repository<Flight>,
 
-    // 👇 Inject Setting Repo để đọc bảng tham số
     @InjectRepository(Setting)
     private settingRepo: Repository<Setting>,
+
+    @InjectRepository(IntermediateAirport)
+    private intermediateRepo: Repository<IntermediateAirport>,
   ) {}
 
-  // --- 1. TẠO CHUYẾN BAY (FULL LOGIC) ---
+  // --- 1. TẠO CHUYẾN BAY ---
   async create(dto: CreateFlightDto) {
-    // 👇 Ép kiểu sang 'any' để tránh lỗi TypeScript nếu file DTO của bạn chưa cập nhật kịp
     const input = dto as any; 
 
-    // A. Lấy quy định từ Database (ID = 1)
     const settings = await this.settingRepo.findOne({ where: { id: 1 } });
     
-    // Nếu chưa seed bảng Setting thì dùng giá trị mặc định (30 phút)
     const minFlightTime = settings ? settings.minFlightTime : 30;
+    const maxIntermediateAirports = settings ? settings.maxIntermediateAirports : 2;
+    const minStopoverTime = settings ? settings.minStopoverTime : 10;
+    const maxStopoverTime = settings ? settings.maxStopoverTime : 20;
 
-    // B. Tính toán thời gian bay
-    // Input từ Frontend thường là string ISO, cần chuyển sang Date
+    // Tính toán thời gian bay
     const startTime = new Date(input.startTime);
     const endTime = new Date(input.endTime);
+    const now = new Date();
 
-    // Kiểm tra logic thời gian: Ngày về phải sau ngày đi
+    // Kiểm tra quy định: Tạo chuyến bay phải trước 72 giờ
+    const hoursUntilFlight = (startTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+    if (hoursUntilFlight < 0) {
+      throw new BadRequestException(
+        'Không thể tạo chuyến bay với thời gian đã qua. Vui lòng chọn thời gian trong tương lai.'
+      );
+    }
+    if (hoursUntilFlight < 72) {
+      throw new BadRequestException(
+        `Vi phạm quy định: Chỉ được tạo chuyến bay trước ít nhất 72 giờ. Hiện tại chỉ còn ${Math.floor(hoursUntilFlight)} giờ.`
+      );
+    }
+
     if (endTime.getTime() <= startTime.getTime()) {
       throw new BadRequestException('Lỗi: Thời gian hạ cánh phải sau thời gian cất cánh!');
     }
 
-    // Tính thời lượng (phút) = (Hiệu số milisecond) / 60000
     const duration = (endTime.getTime() - startTime.getTime()) / 60000;
 
-    // C. KIỂM TRA RÀNG BUỘC (QUY ĐỊNH)
     if (duration < minFlightTime) {
       throw new BadRequestException(
         `Vi phạm quy định: Thời gian bay quá ngắn (${Math.floor(duration)} phút). Tối thiểu phải là ${minFlightTime} phút.`
       );
     }
 
-    // D. Chuẩn bị dữ liệu để lưu vào Database
-    // ⚠️ QUAN TRỌNG: TypeORM cần object { id: ... } cho các quan hệ, nhưng FE gửi lên chỉ là số ID
+    if (input.intermediateAirports && input.intermediateAirports.length > 0) {
+      if (input.intermediateAirports.length > maxIntermediateAirports) {
+        throw new BadRequestException(
+          `Vi phạm quy định: Số sân bay trung gian tối đa là ${maxIntermediateAirports}`
+        );
+      }
+
+      for (const inter of input.intermediateAirports) {
+        if (inter.duration < minStopoverTime || inter.duration > maxStopoverTime) {
+          throw new BadRequestException(
+            `Vi phạm quy định: Thời gian dừng tại sân bay trung gian phải từ ${minStopoverTime} đến ${maxStopoverTime} phút`
+          );
+        }
+      }
+    }
+
     const newFlight = this.flightRepo.create({
-      ...input, // Copy các trường cơ bản (flightCode, price...)
-      
+      ...input,
       duration: duration, 
-      availableSeats: input.totalSeats, // Mặc định ghế trống = tổng ghế
-      
-      // 👇 MAP ID SANG RELATION OBJECT
-      plane: input.planeId ? { id: input.planeId } : undefined,
-      fromAirport: input.fromAirportId ? { id: input.fromAirportId } : undefined,
-      toAirport: input.toAirportId ? { id: input.toAirportId } : undefined,
+      availableSeats: input.totalSeats,
+      plane: input.planeId ? { id: input.planeId } as any : undefined,
+      fromAirport: input.fromAirportId ? { id: input.fromAirportId } as any : undefined,
+      toAirport: input.toAirportId ? { id: input.toAirportId } as any : undefined,
     });
 
-    return await this.flightRepo.save(newFlight);
+    const savedFlight = await this.flightRepo.save(newFlight);
+
+    if (input.intermediateAirports && input.intermediateAirports.length > 0) {
+      for (const inter of input.intermediateAirports) {
+        await this.intermediateRepo.save({
+          flight: savedFlight as any,
+          airport: { id: inter.airportId } as any,
+          duration: inter.duration,
+          note: inter.note || '',
+        });
+      }
+    }
+
+    return savedFlight;
   }
 
-  // --- 2. LẤY DANH SÁCH (KÈM QUAN HỆ) ---
   async findAll() {
     return await this.flightRepo.find({
-      // 👇 Quan trọng: Lấy kèm thông tin để Frontend hiển thị tên Sân bay/Máy bay thay vì số ID
-      relations: ['plane', 'fromAirport', 'toAirport'], 
+      relations: ['plane', 'fromAirport', 'toAirport', 'intermediates', 'intermediates.airport'], 
       order: {
-        startTime: 'ASC', // Sắp xếp ngày gần nhất lên đầu
+        startTime: 'ASC',
       },
     });
   }
 
-  // --- 3. LẤY CHI TIẾT 1 CHUYẾN ---
   async findOne(id: number) {
     return await this.flightRepo.findOne({
       where: { id },
-      relations: ['plane', 'fromAirport', 'toAirport', 'tickets'],
+      relations: ['plane', 'fromAirport', 'toAirport', 'tickets', 'intermediates', 'intermediates.airport'],
     });
   }
 
-  // --- 4. CẬP NHẬT CHUYẾN BAY ---
   async update(id: number, dto: CreateFlightDto) {
     const input = dto as any;
-    
-    // Lấy chuyến bay hiện tại
+  
     const flight = await this.flightRepo.findOne({ where: { id } });
     if (!flight) {
       throw new BadRequestException('Không tìm thấy chuyến bay');
     }
 
-    // Kiểm tra quy định nếu có thay đổi thời gian
+    // Kiểm tra quy định: Cập nhật phải trước 72 giờ
+    const now = new Date();
+    const startTime = input.startTime ? new Date(input.startTime) : flight.startTime;
+    const hoursUntilFlight = (startTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+    if (hoursUntilFlight < 0) {
+      throw new BadRequestException(
+        'Không thể cập nhật chuyến bay đã cất cánh hoặc đã hoàn thành.'
+      );
+    }
+    if (hoursUntilFlight < 72) {
+      throw new BadRequestException(
+        `Vi phạm quy định: Chỉ được cập nhật chuyến bay trước ít nhất 72 giờ. Hiện tại chỉ còn ${Math.floor(hoursUntilFlight)} giờ.`
+      );
+    }
+
     if (input.startTime && input.endTime) {
-      const startTime = new Date(input.startTime);
+      const newStartTime = new Date(input.startTime);
       const endTime = new Date(input.endTime);
       
-      if (endTime.getTime() <= startTime.getTime()) {
+      if (endTime.getTime() <= newStartTime.getTime()) {
         throw new BadRequestException('Thời gian hạ cánh phải sau thời gian cất cánh!');
       }
 
@@ -115,26 +161,60 @@ export class FlightsService {
       input.duration = duration;
     }
 
-    // Tính số vé đã đặt (totalSeats cũ - availableSeats cũ)
     const ticketsSold = flight.totalSeats - flight.availableSeats;
-    
-    // Update các trường
+
     Object.assign(flight, {
       ...input,
       plane: input.planeId ? { id: input.planeId } : flight.plane,
       fromAirport: input.fromAirportId ? { id: input.fromAirportId } : flight.fromAirport,
       toAirport: input.toAirportId ? { id: input.toAirportId } : flight.toAirport,
     });
-    
-    // Nếu thay đổi totalSeats (thường do đổi máy bay), cập nhật lại availableSeats
+
     if (input.totalSeats !== undefined) {
       flight.availableSeats = input.totalSeats - ticketsSold;
     }
 
-    return await this.flightRepo.save(flight);
+    const savedFlight = await this.flightRepo.save(flight);
+
+    // Cập nhật sân bay trung gian
+    if (input.intermediateAirports !== undefined) {
+      // Xóa các sân bay trung gian cũ
+      await this.intermediateRepo.delete({ flight: { id: savedFlight.id } });
+
+      // Thêm sân bay trung gian mới
+      if (input.intermediateAirports.length > 0) {
+        const settings = await this.settingRepo.findOne({ where: { id: 1 } });
+        const maxIntermediateAirports = settings ? settings.maxIntermediateAirports : 2;
+        const minStopoverTime = settings ? settings.minStopoverTime : 10;
+        const maxStopoverTime = settings ? settings.maxStopoverTime : 20;
+
+        if (input.intermediateAirports.length > maxIntermediateAirports) {
+          throw new BadRequestException(
+            `Vi phạm quy định: Số sân bay trung gian tối đa là ${maxIntermediateAirports}`
+          );
+        }
+
+        for (const inter of input.intermediateAirports) {
+          if (inter.duration < minStopoverTime || inter.duration > maxStopoverTime) {
+            throw new BadRequestException(
+              `Vi phạm quy định: Thời gian dừng tại sân bay trung gian phải từ ${minStopoverTime} đến ${maxStopoverTime} phút`
+            );
+          }
+
+          await this.intermediateRepo.save({
+            flight: savedFlight as any,
+            airport: { id: inter.airportId } as any,
+            duration: inter.duration,
+            note: inter.note || '',
+          });
+        }
+      }
+    }
+
+    return savedFlight;
   }
 
-  // --- 5. XÓA CHUYẾN BAY ---
+  // ---  XÓA CHUYẾN BAY ---
   async remove(id: number) {
     const flight = await this.flightRepo.findOne({ 
       where: { id },
@@ -143,6 +223,20 @@ export class FlightsService {
 
     if (!flight) {
       throw new BadRequestException('Không tìm thấy chuyến bay');
+    }
+
+    // Kiểm tra quy định: Xóa phải trước 72 giờ
+    const now = new Date();
+    const hoursUntilFlight = (flight.startTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+    if (hoursUntilFlight < 0) {
+      throw new BadRequestException(
+        'Không thể hủy chuyến bay đã cất cánh hoặc đã hoàn thành.'
+      );
+    }
+    if (hoursUntilFlight < 72) {
+      throw new BadRequestException(
+        `Vi phạm quy định: Chỉ được hủy chuyến bay trước ít nhất 72 giờ. Hiện tại chỉ còn ${Math.floor(hoursUntilFlight)} giờ.`
+      );
     }
 
     // Kiểm tra xem đã có vé được đặt chưa

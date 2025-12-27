@@ -134,7 +134,12 @@ export default function DashboardScreen() {
           minute: new Date(flight.startTime).getMinutes(),
           businessSeats: flight.plane.businessSeats,
           economySeats: flight.plane.economySeats,
-          intermediateAirports: [] // TODO: Load từ API nếu có
+          intermediateAirports: flight.intermediates?.map(inter => ({
+            id: inter.id,
+            name: inter.airport.name,
+            duration: inter.duration,
+            notes: inter.note || ''
+          })) || []
         }));
         
         // Format airports data
@@ -198,6 +203,19 @@ export default function DashboardScreen() {
         const startTime = new Date(`${updatedFlight.date}T${String(updatedFlight.hour).padStart(2, '0')}:${String(updatedFlight.minute).padStart(2, '0')}:00`);
         const endTime = new Date(startTime.getTime() + parseInt(updatedFlight.duration) * 60000);
         
+        // Chuyển đổi sân bay trung gian
+        const intermediateAirports = updatedFlight.intermediateAirports
+          ?.filter(ia => ia.name)
+          .map(ia => {
+            const airport = airports.find(a => a.name === ia.name);
+            return {
+              airportId: airport?.id,
+              duration: parseInt(ia.duration, 10),
+              note: ia.notes || ''
+            };
+          })
+          .filter(ia => ia.airportId);
+        
         const backendData = {
           flightCode: updatedFlight.id, 
           fromAirportId: fromAirport.id,
@@ -206,7 +224,8 @@ export default function DashboardScreen() {
           startTime: startTime.toISOString(),
           endTime: endTime.toISOString(),
           price: parseInt(updatedFlight.price, 10),
-          totalSeats: plane.totalSeats
+          totalSeats: plane.totalSeats,
+          intermediateAirports: intermediateAirports
         };
         
         // Gọi API update
@@ -233,7 +252,12 @@ export default function DashboardScreen() {
           minute: new Date(flight.startTime).getMinutes(),
           businessSeats: flight.plane.businessSeats,
           economySeats: flight.plane.economySeats,
-          intermediateAirports: []
+          intermediateAirports: flight.intermediates?.map(inter => ({
+            id: inter.id,
+            name: inter.airport.name,
+            duration: inter.duration,
+            notes: inter.note || ''
+          })) || []
         }));
         setFlights(formattedFlights);
         alert('Cập nhật chuyến bay thành công!');
@@ -242,7 +266,6 @@ export default function DashboardScreen() {
         alert(err.response?.data?.message || 'Không thể cập nhật chuyến bay');
       }
   };
-
   const handleCreateFlight = async (newFlight) => {
       try {
         // Chuyển đổi dữ liệu frontend sang backend format
@@ -262,6 +285,19 @@ export default function DashboardScreen() {
         // Generate flightCode tự động: VN + random 4 số
         const flightCode = `VN${Math.floor(1000 + Math.random() * 9000)}`;
         
+        // Chuyển đổi sân bay trung gian
+        const intermediateAirports = newFlight.intermediateAirports
+          ?.filter(ia => ia.name) // Chỉ lấy những sân bay đã chọn
+          .map(ia => {
+            const airport = airports.find(a => a.name === ia.name);
+            return {
+              airportId: airport?.id,
+              duration: parseInt(ia.duration, 10),
+              note: ia.notes || ''
+            };
+          })
+          .filter(ia => ia.airportId); // Loại bỏ những sân bay không hợp lệ
+        
         const backendData = {
           flightCode: flightCode,
           fromAirportId: fromAirport.id,
@@ -270,7 +306,8 @@ export default function DashboardScreen() {
           startTime: startTime.toISOString(),
           endTime: endTime.toISOString(),
           price: parseInt(newFlight.price, 10),
-          totalSeats: plane.totalSeats
+          totalSeats: plane.totalSeats,
+          intermediateAirports: intermediateAirports
         };
         
         // Gọi API create
@@ -297,7 +334,12 @@ export default function DashboardScreen() {
           minute: new Date(flight.startTime).getMinutes(),
           businessSeats: flight.plane.businessSeats,
           economySeats: flight.plane.economySeats,
-          intermediateAirports: []
+          intermediateAirports: flight.intermediates?.map(inter => ({
+            id: inter.id,
+            name: inter.airport.name,
+            duration: inter.duration,
+            notes: inter.note || ''
+          })) || []
         }));
         setFlights(formattedFlights);
         alert('Tạo chuyến bay thành công!');

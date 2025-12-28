@@ -206,8 +206,19 @@ const FlightList = ({ flights, onEdit, onDelete, onViewDetails, canManage }) => 
 // --- Sub-component: FlightForm ---
 const FlightForm = ({ initialData, onSubmit, onCancel, airports, airplanes, rules }) => {
     const isEditMode = !!initialData;
+    console.log('FlightForm initialData:', initialData);
+    console.log('intermediateAirports from initialData:', initialData?.intermediateAirports);
     const [flightData, setFlightData] = useState(isEditMode ? initialData : { fromAirport: '', fromCity: '', toAirport: '', toCity: '', planeId: '', date: '', hour: '', minute: '', duration: '', price: '', businessSeats: 0, economySeats: 0, seatsTaken: 0, });
-    const [intermediateAirports, setIntermediateAirports] = useState(isEditMode ? initialData.intermediateAirports : []);
+    const [intermediateAirports, setIntermediateAirports] = useState(isEditMode ? (initialData.intermediateAirports || []) : []);
+    
+    // Đồng bộ state khi initialData thay đổi
+    useEffect(() => {
+        if (initialData) {
+            setFlightData(initialData);
+            setIntermediateAirports(initialData.intermediateAirports || []);
+            console.log('🔄 CẬP NHẬT STATE từ initialData:', initialData.intermediateAirports);
+        }
+    }, [initialData]);
     
     const handleInputChange = (e) => { 
         const { name, value } = e.target;
@@ -239,7 +250,32 @@ const FlightForm = ({ initialData, onSubmit, onCancel, airports, airplanes, rule
     
     const handleSubmit = (e) => { 
         e.preventDefault(); 
-        if(parseInt(flightData.duration, 10) < rules.minFlightTime){ alert(`Thời gian bay tối thiểu là ${rules.minFlightTime} phút.`); return; }
+        
+        // Validate thời gian bay tối thiểu
+        if(parseInt(flightData.duration, 10) < rules.minFlightTime){ 
+            alert(`Vi phạm quy định: Thời gian bay tối thiểu là ${rules.minFlightTime} phút.`); 
+            return; 
+        }
+        
+        // Validate số lượng sân bay trung gian
+        if(intermediateAirports.length > rules.maxStopovers) {
+            alert(`Vi phạm quy định: Số sân bay trung gian tối đa là ${rules.maxStopovers}.`);
+            return;
+        }
+        
+        // Validate thời gian dừng tại mỗi sân bay trung gian
+        for(const airport of intermediateAirports) {
+            const duration = parseInt(airport.duration, 10);
+            if(duration < rules.minStopTime || duration > rules.maxStopTime) {
+                alert(`Vi phạm quy định: Thời gian dừng tại sân bay trung gian phải từ ${rules.minStopTime} đến ${rules.maxStopTime} phút.`);
+                return;
+            }
+            if(!airport.name) {
+                alert('Vui lòng chọn sân bay trung gian.');
+                return;
+            }
+        }
+        
         onSubmit({ ...flightData, intermediateAirports }); 
     };
 
@@ -381,7 +417,11 @@ const FlightsTab = ({ flights, airports, airplanes, rules, onEdit, onDelete, onC
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const canManage = ['Quản trị', 'Điều hành bay'].includes(user.role); // Sửa/Xóa/Thêm
     
-    const handleEditClick = (flight) => { setEditingFlight(flight); setSubTab('edit'); };
+    const handleEditClick = (flight) => { 
+        console.log('Edit flight clicked, intermediateAirports:', flight.intermediateAirports);
+        setEditingFlight(flight); 
+        setSubTab('edit'); 
+    };
     const handleViewDetails = (flight) => { setEditingFlight(flight); setSubTab('detail'); };
     const handleSave = (updatedFlight) => { onEdit(updatedFlight); setSubTab('list'); setEditingFlight(null); };
     const handleCreate = (newFlight) => { onCreate(newFlight); setSubTab('list'); };

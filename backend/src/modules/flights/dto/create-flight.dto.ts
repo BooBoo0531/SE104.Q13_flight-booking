@@ -8,7 +8,7 @@ export class IntermediateAirportDto {
   airportId: number;
 
   @IsInt()
-  @Min(10, { message: 'Thời gian dừng phải lớn hơn hoặc bằng 10 phút' })
+  @Min(1, { message: 'Thời gian dừng phải là số dương' })
   duration: number; 
 
   @IsString()

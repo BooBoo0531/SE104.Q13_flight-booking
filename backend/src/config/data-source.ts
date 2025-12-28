@@ -28,7 +28,7 @@ export const AppDataSource = new DataSource({
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
   },
-  dropSchema: true,
+  dropSchema: false, // KHÔNG xóa schema khi restart
   synchronize: true,
   logging: false,
   

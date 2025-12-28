@@ -1,7 +1,7 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString, Matches, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateTicketDto {
-  // UI gửi flightId = flightCode (vd: FL0069)
   @IsString()
   @IsNotEmpty()
   flightId: string;
@@ -18,6 +18,8 @@ export class CreateTicketDto {
   @IsNotEmpty()
   seatClass: string;
 
+  @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   price: number;
@@ -26,15 +28,18 @@ export class CreateTicketDto {
   @IsNotEmpty()
   name: string;
 
-  @IsOptional()
   @IsString()
-  idCard?: string;
+  @IsNotEmpty()
+  @Matches(/^\d{9}(\d{3})?$/, { message: 'CMND/CCCD phải là 9 số hoặc 12 số' })
+  idCard: string;
 
-  @IsOptional()
   @IsString()
-  phone?: string;
+  @IsNotEmpty()
+  @Matches(/^\d{10}$/, { message: 'Số điện thoại phải đúng 10 số' })
+  phone: string;
 
-  @IsOptional()
   @IsString()
-  email?: string;
+  @IsNotEmpty()
+  @IsEmail({}, { message: 'Email không hợp lệ' })
+  email: string;
 }

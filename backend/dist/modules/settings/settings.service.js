@@ -23,20 +23,18 @@ let SettingsService = class SettingsService {
         this.repo = repo;
     }
     async ensureRow() {
-        let row = await this.repo.findOne({ where: { id: 1 } });
-        if (!row) {
-            row = this.repo.create({
-                id: 1,
-                minFlightTime: 30,
-                maxIntermediateAirports: 2,
-                minStopoverTime: 10,
-                maxStopoverTime: 20,
-                latestBookingTime: 1,
-                latestCancellationTime: 1,
-            });
-            row = await this.repo.save(row);
-        }
-        return row;
+        const rows = await this.repo.find({ order: { id: 'ASC' }, take: 1 });
+        if (rows.length > 0)
+            return rows[0];
+        const newRow = this.repo.create({
+            minFlightTime: 30,
+            maxIntermediateAirports: 2,
+            minStopoverTime: 10,
+            maxStopoverTime: 20,
+            latestBookingTime: 12,
+            latestCancellationTime: 1,
+        });
+        return this.repo.save(newRow);
     }
     async getRulesForUI() {
         const s = await this.ensureRow();
@@ -55,10 +53,13 @@ let SettingsService = class SettingsService {
             s.minFlightTime = dto.minFlightTime;
         if (dto.maxStopovers !== undefined)
             s.maxIntermediateAirports = dto.maxStopovers;
-        if (dto.minStopTime !== undefined)
-            s.minStopoverTime = dto.minStopTime;
-        if (dto.maxStopTime !== undefined)
-            s.maxStopoverTime = dto.maxStopTime;
+        const newMinStop = dto.minStopTime !== undefined ? dto.minStopTime : s.minStopoverTime;
+        const newMaxStop = dto.maxStopTime !== undefined ? dto.maxStopTime : s.maxStopoverTime;
+        if (newMinStop > newMaxStop) {
+            throw new common_1.BadRequestException('Thời gian dừng tối thiểu không được lớn hơn thời gian dừng tối đa!');
+        }
+        s.minStopoverTime = newMinStop;
+        s.maxStopoverTime = newMaxStop;
         if (dto.latestBookingTime !== undefined)
             s.latestBookingTime = dto.latestBookingTime;
         if (dto.latestCancelTime !== undefined)

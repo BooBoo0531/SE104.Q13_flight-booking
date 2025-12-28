@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UpdateTicketDto = void 0;
 const class_validator_1 = require("class-validator");
+const class_transformer_1 = require("class-transformer");
 class UpdateTicketDto {
     flightId;
     seat;
@@ -39,6 +40,7 @@ __decorate([
 ], UpdateTicketDto.prototype, "seatClass", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
+    (0, class_transformer_1.Type)(() => Number),
     (0, class_validator_1.IsNumber)(),
     (0, class_validator_1.Min)(0),
     __metadata("design:type", Number)
@@ -51,16 +53,19 @@ __decorate([
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
+    (0, class_validator_1.Matches)(/^\d{9}(\d{3})?$/, { message: 'CMND/CCCD phải là 9 số hoặc 12 số' }),
     __metadata("design:type", String)
 ], UpdateTicketDto.prototype, "idCard", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
+    (0, class_validator_1.Matches)(/^\d{10}$/, { message: 'Số điện thoại phải đúng 10 số' }),
     __metadata("design:type", String)
 ], UpdateTicketDto.prototype, "phone", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsEmail)({}, { message: 'Email không hợp lệ' }),
     __metadata("design:type", String)
 ], UpdateTicketDto.prototype, "email", void 0);
 //# sourceMappingURL=update-ticket.dto.js.map

@@ -61,7 +61,7 @@ exports.AppDataSource = new typeorm_1.DataSource({
         idleTimeoutMillis: 30000,
         connectionTimeoutMillis: 10000,
     },
-    dropSchema: true,
+    dropSchema: false,
     synchronize: true,
     logging: false,
     entities: [

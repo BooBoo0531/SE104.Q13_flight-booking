@@ -2,51 +2,55 @@ import { TicketsService } from './tickets.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 export declare class TicketsController {
-    private readonly svc;
-    constructor(svc: TicketsService);
-    list(): Promise<{
+    private readonly ticketsService;
+    constructor(ticketsService: TicketsService);
+    create(createTicketDto: CreateTicketDto): Promise<{
         ticketId: string;
-        flightId: string;
         seat: string;
         seatClass: string;
         price: number;
         name: string;
-        idCard: string;
-        phone: string;
-        email: string;
+        idCard: string | undefined;
+        phone: string | undefined;
+        email: string | undefined;
+        flightId: string;
+        bookingId: any;
+    }>;
+    findAll(): Promise<{
+        ticketId: string;
+        seat: string;
+        seatClass: string;
+        price: number;
+        name: string;
+        idCard: string | undefined;
+        phone: string | undefined;
+        email: string | undefined;
+        flightId: string;
+        bookingId: any;
     }[]>;
-    get(ticketId: string): Promise<{
+    findOne(ticketId: string): Promise<{
         ticketId: string;
-        flightId: string;
         seat: string;
         seatClass: string;
         price: number;
         name: string;
-        idCard: string;
-        phone: string;
-        email: string;
+        idCard: string | undefined;
+        phone: string | undefined;
+        email: string | undefined;
+        flightId: string;
+        bookingId: any;
     }>;
-    create(dto: CreateTicketDto): Promise<{
+    update(ticketId: string, updateTicketDto: UpdateTicketDto): Promise<{
         ticketId: string;
-        flightId: string;
         seat: string;
         seatClass: string;
         price: number;
         name: string;
-        idCard: string;
-        phone: string;
-        email: string;
-    }>;
-    update(ticketId: string, dto: UpdateTicketDto): Promise<{
-        ticketId: string;
+        idCard: string | undefined;
+        phone: string | undefined;
+        email: string | undefined;
         flightId: string;
-        seat: string;
-        seatClass: string;
-        price: number;
-        name: string;
-        idCard: string;
-        phone: string;
-        email: string;
+        bookingId: any;
     }>;
     remove(ticketId: string): Promise<{
         message: string;

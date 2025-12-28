@@ -5,7 +5,7 @@ export declare class CreateTicketDto {
     seatClass: string;
     price: number;
     name: string;
-    idCard?: string;
-    phone?: string;
-    email?: string;
+    idCard: string;
+    phone: string;
+    email: string;
 }

@@ -13,6 +13,7 @@ exports.CreateTicketClassDto = void 0;
 const class_validator_1 = require("class-validator");
 class CreateTicketClassDto {
     name;
+    g;
     percentage;
     priceRatio;
 }
@@ -25,13 +26,16 @@ __decorate([
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsNumber)(),
-    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Object)
+], CreateTicketClassDto.prototype, "g", void 0);
+__decorate([
+    (0, class_validator_1.Min)(0.000001),
     __metadata("design:type", Number)
 ], CreateTicketClassDto.prototype, "percentage", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsNumber)(),
-    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.Min)(0.000001),
     __metadata("design:type", Number)
 ], CreateTicketClassDto.prototype, "priceRatio", void 0);
 //# sourceMappingURL=create-ticket-class.dto.js.map

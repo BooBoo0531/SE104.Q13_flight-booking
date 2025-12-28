@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   UseGuards,
 } from '@nestjs/common';
 import { TicketClassesService } from './ticket-classes.service';
@@ -31,10 +32,18 @@ export class TicketClassesController {
     return this.svc.create(dto);
   }
 
+  // ✅ Frontend có thể gọi PUT -> thêm để tránh "Cannot PUT ..."
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Quản trị')
+  @Put(':id')
+  updatePut(@Param('id') id: string, @Body() dto: UpdateTicketClassDto) {
+    return this.svc.update(+id, dto);
+  }
+
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('Quản trị')
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateTicketClassDto) {
+  updatePatch(@Param('id') id: string, @Body() dto: UpdateTicketClassDto) {
     return this.svc.update(+id, dto);
   }
 

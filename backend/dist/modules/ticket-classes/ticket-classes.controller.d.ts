@@ -14,7 +14,12 @@ export declare class TicketClassesController {
         name: string;
         percentage: number;
     }>;
-    update(id: string, dto: UpdateTicketClassDto): Promise<{
+    updatePut(id: string, dto: UpdateTicketClassDto): Promise<{
+        id: number;
+        name: string;
+        percentage: number;
+    }>;
+    updatePatch(id: string, dto: UpdateTicketClassDto): Promise<{
         id: number;
         name: string;
         percentage: number;

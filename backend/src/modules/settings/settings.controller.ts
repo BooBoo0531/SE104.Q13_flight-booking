@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Put, UseGuards } from '@nestjs/common';
 import { SettingsService } from './settings.service';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
@@ -18,6 +18,14 @@ export class SettingsController {
   @Roles('Quản trị', 'Ban giám đốc')
   @Patch()
   updateRules(@Body() dto: UpdateSettingsDto) {
+    return this.svc.updateRulesFromUI(dto);
+  }
+
+  // FE hiện đang gọi PUT /settings -> hỗ trợ luôn để khỏi lỗi 404
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('Quản trị', 'Ban giám đốc')
+  @Put()
+  replaceRules(@Body() dto: UpdateSettingsDto) {
     return this.svc.updateRulesFromUI(dto);
   }
 }

@@ -17,48 +17,29 @@ const common_1 = require("@nestjs/common");
 const tickets_service_1 = require("./tickets.service");
 const create_ticket_dto_1 = require("./dto/create-ticket.dto");
 const update_ticket_dto_1 = require("./dto/update-ticket.dto");
-const jwt_auth_guard_1 = require("../../auth/jwt-auth.guard");
-const roles_decorator_1 = require("../../auth/roles.decorator");
-const roles_guard_1 = require("../../auth/roles.guard");
 let TicketsController = class TicketsController {
-    svc;
-    constructor(svc) {
-        this.svc = svc;
+    ticketsService;
+    constructor(ticketsService) {
+        this.ticketsService = ticketsService;
     }
-    list() {
-        return this.svc.findAll();
+    create(createTicketDto) {
+        return this.ticketsService.create(createTicketDto);
     }
-    get(ticketId) {
-        return this.svc.findOneByTicketId(ticketId);
+    findAll() {
+        return this.ticketsService.findAll();
     }
-    create(dto) {
-        return this.svc.create(dto);
+    findOne(ticketId) {
+        return this.ticketsService.findOneByTicketId(ticketId);
     }
-    update(ticketId, dto) {
-        return this.svc.update(ticketId, dto);
+    update(ticketId, updateTicketDto) {
+        return this.ticketsService.update(ticketId, updateTicketDto);
     }
     remove(ticketId) {
-        return this.svc.remove(ticketId);
+        return this.ticketsService.remove(ticketId);
     }
 };
 exports.TicketsController = TicketsController;
 __decorate([
-    (0, roles_decorator_1.Roles)('Quản trị', 'Nhân viên', 'Ban giám đốc'),
-    (0, common_1.Get)(),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
-], TicketsController.prototype, "list", null);
-__decorate([
-    (0, roles_decorator_1.Roles)('Quản trị', 'Nhân viên', 'Ban giám đốc'),
-    (0, common_1.Get)(':ticketId'),
-    __param(0, (0, common_1.Param)('ticketId')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
-], TicketsController.prototype, "get", null);
-__decorate([
-    (0, roles_decorator_1.Roles)('Quản trị', 'Nhân viên'),
     (0, common_1.Post)(),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -66,7 +47,19 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], TicketsController.prototype, "create", null);
 __decorate([
-    (0, roles_decorator_1.Roles)('Quản trị', 'Nhân viên'),
+    (0, common_1.Get)(),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], TicketsController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)(':ticketId'),
+    __param(0, (0, common_1.Param)('ticketId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], TicketsController.prototype, "findOne", null);
+__decorate([
     (0, common_1.Patch)(':ticketId'),
     __param(0, (0, common_1.Param)('ticketId')),
     __param(1, (0, common_1.Body)()),
@@ -75,7 +68,6 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], TicketsController.prototype, "update", null);
 __decorate([
-    (0, roles_decorator_1.Roles)('Quản trị', 'Nhân viên'),
     (0, common_1.Delete)(':ticketId'),
     __param(0, (0, common_1.Param)('ticketId')),
     __metadata("design:type", Function),
@@ -83,7 +75,6 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], TicketsController.prototype, "remove", null);
 exports.TicketsController = TicketsController = __decorate([
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, common_1.Controller)('tickets'),
     __metadata("design:paramtypes", [tickets_service_1.TicketsService])
 ], TicketsController);

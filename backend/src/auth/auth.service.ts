@@ -18,7 +18,10 @@ export class AuthService {
   ) {}
 
   async login(email: string, password: string) {
-    const user = await this.userRepo.findOne({ where: { email } });
+    const user = await this.userRepo.findOne({ 
+      where: { email },
+      relations: ['role']
+    });
     if (!user) throw new UnauthorizedException('Email không tồn tại');
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -27,7 +30,7 @@ export class AuthService {
     const payload = {
       sub: user.id,
       email: user.email,
-      role: user.role,
+      role: user.role?.role,
     };
 
     return {
@@ -35,7 +38,7 @@ export class AuthService {
       user: {
         id: user.id,
         name: user.name,
-        role: user.role,
+        role: user.role?.role,
       },
     };
   }

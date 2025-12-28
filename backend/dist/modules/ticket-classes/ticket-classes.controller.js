@@ -31,7 +31,10 @@ let TicketClassesController = class TicketClassesController {
     create(dto) {
         return this.svc.create(dto);
     }
-    update(id, dto) {
+    updatePut(id, dto) {
+        return this.svc.update(+id, dto);
+    }
+    updatePatch(id, dto) {
         return this.svc.update(+id, dto);
     }
     remove(id) {
@@ -57,13 +60,23 @@ __decorate([
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('Quản trị'),
+    (0, common_1.Put)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, update_ticket_class_dto_1.UpdateTicketClassDto]),
+    __metadata("design:returntype", void 0)
+], TicketClassesController.prototype, "updatePut", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('Quản trị'),
     (0, common_1.Patch)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, update_ticket_class_dto_1.UpdateTicketClassDto]),
     __metadata("design:returntype", void 0)
-], TicketClassesController.prototype, "update", null);
+], TicketClassesController.prototype, "updatePatch", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('Quản trị'),

@@ -7,11 +7,11 @@ export class UpdateTicketClassDto {
 
   @IsOptional()
   @IsNumber()
-  @Min(0)
+  @Min(0.000001)
   percentage?: number;
 
   @IsOptional()
   @IsNumber()
-  @Min(0)
+  @Min(0.000001)
   priceRatio?: number;
 }

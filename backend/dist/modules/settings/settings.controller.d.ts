@@ -19,4 +19,12 @@ export declare class SettingsController {
         latestBookingTime: number;
         latestCancelTime: number;
     }>;
+    replaceRules(dto: UpdateSettingsDto): Promise<{
+        minFlightTime: number;
+        maxStopovers: number;
+        minStopTime: number;
+        maxStopTime: number;
+        latestBookingTime: number;
+        latestCancelTime: number;
+    }>;
 }

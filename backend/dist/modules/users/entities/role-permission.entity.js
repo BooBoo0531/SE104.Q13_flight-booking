@@ -11,9 +11,11 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RolePermission = void 0;
 const typeorm_1 = require("typeorm");
+const user_entity_1 = require("../../users/entities/user.entity");
 let RolePermission = class RolePermission {
     role;
     permissions;
+    users;
 };
 exports.RolePermission = RolePermission;
 __decorate([
@@ -24,6 +26,10 @@ __decorate([
     (0, typeorm_1.Column)({ type: 'jsonb', name: 'DanhSachQuyen', nullable: true }),
     __metadata("design:type", Object)
 ], RolePermission.prototype, "permissions", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => user_entity_1.User, (user) => user.role),
+    __metadata("design:type", Array)
+], RolePermission.prototype, "users", void 0);
 exports.RolePermission = RolePermission = __decorate([
     (0, typeorm_1.Entity)({ name: 'PHANQUYEN' })
 ], RolePermission);

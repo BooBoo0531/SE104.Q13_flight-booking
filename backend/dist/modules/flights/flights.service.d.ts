@@ -9,10 +9,10 @@ export declare class FlightsService {
     private settingRepo;
     private intermediateRepo;
     constructor(flightRepo: Repository<Flight>, settingRepo: Repository<Setting>, intermediateRepo: Repository<IntermediateAirport>);
-    create(dto: CreateFlightDto): Promise<Flight[]>;
+    create(dto: CreateFlightDto): Promise<Flight | null>;
     findAll(): Promise<Flight[]>;
     findOne(id: number): Promise<Flight | null>;
-    update(id: number, dto: UpdateFlightDto): Promise<Flight>;
+    update(id: number, dto: UpdateFlightDto): Promise<Flight | null>;
     remove(id: number): Promise<{
         message: string;
     }>;

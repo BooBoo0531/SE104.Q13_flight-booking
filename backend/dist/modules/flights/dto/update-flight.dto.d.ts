@@ -1,3 +1,8 @@
+export declare class IntermediateAirportDto {
+    airportId: number;
+    duration: number;
+    note?: string;
+}
 export declare class UpdateFlightDto {
     flightCode?: string;
     price?: number;
@@ -8,5 +13,6 @@ export declare class UpdateFlightDto {
     fromAirportId?: number;
     toAirportId?: number;
     status?: string;
+    intermediateAirports?: IntermediateAirportDto[];
     duration?: number;
 }

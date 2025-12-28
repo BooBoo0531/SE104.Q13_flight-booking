@@ -9,8 +9,29 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UpdateFlightDto = void 0;
+exports.UpdateFlightDto = exports.IntermediateAirportDto = void 0;
 const class_validator_1 = require("class-validator");
+const class_transformer_1 = require("class-transformer");
+class IntermediateAirportDto {
+    airportId;
+    duration;
+    note;
+}
+exports.IntermediateAirportDto = IntermediateAirportDto;
+__decorate([
+    (0, class_validator_1.IsInt)(),
+    __metadata("design:type", Number)
+], IntermediateAirportDto.prototype, "airportId", void 0);
+__decorate([
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(1, { message: 'Thời gian dừng phải là số dương' }),
+    __metadata("design:type", Number)
+], IntermediateAirportDto.prototype, "duration", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], IntermediateAirportDto.prototype, "note", void 0);
 class UpdateFlightDto {
     flightCode;
     price;
@@ -21,6 +42,7 @@ class UpdateFlightDto {
     fromAirportId;
     toAirportId;
     status;
+    intermediateAirports;
     duration;
 }
 exports.UpdateFlightDto = UpdateFlightDto;
@@ -71,4 +93,11 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], UpdateFlightDto.prototype, "status", void 0);
+__decorate([
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => IntermediateAirportDto),
+    __metadata("design:type", Array)
+], UpdateFlightDto.prototype, "intermediateAirports", void 0);
 //# sourceMappingURL=update-flight.dto.js.map

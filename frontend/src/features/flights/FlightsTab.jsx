@@ -206,8 +206,19 @@ const FlightList = ({ flights, onEdit, onDelete, onViewDetails, canManage }) => 
 // --- Sub-component: FlightForm ---
 const FlightForm = ({ initialData, onSubmit, onCancel, airports, airplanes, rules }) => {
     const isEditMode = !!initialData;
+    console.log('FlightForm initialData:', initialData);
+    console.log('intermediateAirports from initialData:', initialData?.intermediateAirports);
     const [flightData, setFlightData] = useState(isEditMode ? initialData : { fromAirport: '', fromCity: '', toAirport: '', toCity: '', planeId: '', date: '', hour: '', minute: '', duration: '', price: '', businessSeats: 0, economySeats: 0, seatsTaken: 0, });
-    const [intermediateAirports, setIntermediateAirports] = useState(isEditMode ? initialData.intermediateAirports : []);
+    const [intermediateAirports, setIntermediateAirports] = useState(isEditMode ? (initialData.intermediateAirports || []) : []);
+    
+    // Đồng bộ state khi initialData thay đổi
+    useEffect(() => {
+        if (initialData) {
+            setFlightData(initialData);
+            setIntermediateAirports(initialData.intermediateAirports || []);
+            console.log('🔄 CẬP NHẬT STATE từ initialData:', initialData.intermediateAirports);
+        }
+    }, [initialData]);
     
     const handleInputChange = (e) => { 
         const { name, value } = e.target;
@@ -406,7 +417,11 @@ const FlightsTab = ({ flights, airports, airplanes, rules, onEdit, onDelete, onC
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const canManage = ['Quản trị', 'Điều hành bay'].includes(user.role); // Sửa/Xóa/Thêm
     
-    const handleEditClick = (flight) => { setEditingFlight(flight); setSubTab('edit'); };
+    const handleEditClick = (flight) => { 
+        console.log('Edit flight clicked, intermediateAirports:', flight.intermediateAirports);
+        setEditingFlight(flight); 
+        setSubTab('edit'); 
+    };
     const handleViewDetails = (flight) => { setEditingFlight(flight); setSubTab('detail'); };
     const handleSave = (updatedFlight) => { onEdit(updatedFlight); setSubTab('list'); setEditingFlight(null); };
     const handleCreate = (newFlight) => { onCreate(newFlight); setSubTab('list'); };

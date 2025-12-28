@@ -81,7 +81,11 @@ let FlightsService = class FlightsService {
                 });
             }
         }
-        return savedFlight;
+        const reloadedFlight = await this.flightRepo.findOne({
+            where: { id: savedFlight.id },
+            relations: ['plane', 'fromAirport', 'toAirport', 'intermediates', 'intermediates.airport'],
+        });
+        return reloadedFlight;
     }
     async findAll() {
         return await this.flightRepo.find({
@@ -99,6 +103,12 @@ let FlightsService = class FlightsService {
     }
     async update(id, dto) {
         const input = dto;
+        console.log('🔍 UPDATE FLIGHT ID:', id);
+        console.log('📦 INPUT DATA:', input);
+        console.log('🛫 INPUT intermediateAirports:', input.intermediateAirports);
+        console.log('🛫 Type:', typeof input.intermediateAirports);
+        console.log('🛫 Is undefined?:', input.intermediateAirports === undefined);
+        console.log('🛫 Is array?:', Array.isArray(input.intermediateAirports));
         const flight = await this.flightRepo.findOne({ where: { id } });
         if (!flight) {
             throw new common_1.BadRequestException('Không tìm thấy chuyến bay');
@@ -137,8 +147,11 @@ let FlightsService = class FlightsService {
             flight.availableSeats = input.totalSeats - ticketsSold;
         }
         const savedFlight = await this.flightRepo.save(flight);
+        console.log('✅ SAVED FLIGHT ID:', savedFlight.id);
         if (input.intermediateAirports !== undefined) {
+            console.log('📝 UPDATING INTERMEDIATE AIRPORTS:', input.intermediateAirports);
             await this.intermediateRepo.delete({ flight: { id: savedFlight.id } });
+            console.log('🗑️  DELETED OLD INTERMEDIATES');
             if (input.intermediateAirports.length > 0) {
                 const settings = await this.settingRepo.findOne({ where: { id: 1 } });
                 const maxIntermediateAirports = settings ? settings.maxIntermediateAirports : 2;
@@ -151,16 +164,26 @@ let FlightsService = class FlightsService {
                     if (inter.duration < minStopoverTime || inter.duration > maxStopoverTime) {
                         throw new common_1.BadRequestException(`Vi phạm quy định: Thời gian dừng tại sân bay trung gian phải từ ${minStopoverTime} đến ${maxStopoverTime} phút`);
                     }
-                    await this.intermediateRepo.save({
+                    console.log('💾 SAVING INTERMEDIATE:', inter);
+                    const saved = await this.intermediateRepo.save({
                         flight: savedFlight,
                         airport: { id: inter.airportId },
                         duration: inter.duration,
                         note: inter.note || '',
                     });
+                    console.log('✅ SAVED INTERMEDIATE:', saved);
                 }
             }
         }
-        return savedFlight;
+        console.log('🔄 RELOADING FLIGHT WITH RELATIONS...');
+        const reloadedFlight = await this.flightRepo.findOne({
+            where: { id: savedFlight.id },
+            relations: ['plane', 'fromAirport', 'toAirport', 'intermediates', 'intermediates.airport'],
+        });
+        console.log('✅ RELOADED FLIGHT:', reloadedFlight?.id);
+        console.log('🛫 INTERMEDIATES COUNT:', reloadedFlight?.intermediates?.length);
+        console.log('🛫 INTERMEDIATES DATA:', reloadedFlight?.intermediates);
+        return reloadedFlight;
     }
     async remove(id) {
         const flight = await this.flightRepo.findOne({

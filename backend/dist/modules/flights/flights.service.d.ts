@@ -5,15 +5,6 @@ import { IntermediateAirport } from '../intermediate-airports/entities/intermedi
 import { CreateFlightDto } from './dto/create-flight.dto';
 import { UpdateFlightDto } from './dto/update-flight.dto';
 export declare class FlightsService {
-<<<<<<< HEAD
-    private readonly flightRepo;
-    private readonly settingRepo;
-    constructor(flightRepo: Repository<Flight>, settingRepo: Repository<Setting>);
-    create(dto: CreateFlightDto): Promise<Flight>;
-    findAll(): Promise<Flight[]>;
-    findOne(id: number): Promise<Flight | null>;
-    update(id: number, dto: UpdateFlightDto): Promise<Flight>;
-=======
     private flightRepo;
     private settingRepo;
     private intermediateRepo;
@@ -21,8 +12,7 @@ export declare class FlightsService {
     create(dto: CreateFlightDto): Promise<Flight[]>;
     findAll(): Promise<Flight[]>;
     findOne(id: number): Promise<Flight | null>;
-    update(id: number, dto: CreateFlightDto): Promise<Flight>;
->>>>>>> origin/main
+    update(id: number, dto: UpdateFlightDto): Promise<Flight>;
     remove(id: number): Promise<{
         message: string;
     }>;

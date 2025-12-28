@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.User = void 0;
 const typeorm_1 = require("typeorm");
 const booking_entity_1 = require("../../bookings/entities/booking.entity");
+const role_permission_entity_1 = require("../../users/entities/role-permission.entity");
 let User = class User {
     id;
     name;
@@ -45,8 +46,9 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "phone", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 'Nhân viên', name: 'VaiTro' }),
-    __metadata("design:type", String)
+    (0, typeorm_1.ManyToOne)(() => role_permission_entity_1.RolePermission, (rolePermission) => rolePermission.users),
+    (0, typeorm_1.JoinColumn)({ name: 'VaiTro' }),
+    __metadata("design:type", role_permission_entity_1.RolePermission)
 ], User.prototype, "role", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'varchar', name: 'ResetPasswordToken', nullable: true }),

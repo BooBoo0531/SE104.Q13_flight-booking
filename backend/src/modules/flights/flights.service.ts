@@ -118,7 +118,7 @@ export class FlightsService {
     });
   }
 
-  async update(id: number, dto: CreateFlightDto) {
+  async update(id: number, dto: UpdateFlightDto) {
     const input = dto as any;
   
     const flight = await this.flightRepo.findOne({ where: { id } });

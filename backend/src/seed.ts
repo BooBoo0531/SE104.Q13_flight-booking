@@ -97,29 +97,37 @@ async function bootstrap() {
 
     // 2.5 TẠO QUYỀN CHO CÁC VAI TRÒ
     await rolePermRepo.save([
-      { role: 'admin', permissions: { ChuyenBay: true, VeChuyenBay: true, BaoCao: true, MayBay: true, TaiKhoan: true, CaiDat: true } },
-      { role: 'manager', permissions: { ChuyenBay: true, VeChuyenBay: false, BaoCao: true, MayBay: true, TaiKhoan: false, CaiDat: false } },
-      { role: 'staff', permissions: { ChuyenBay: false, VeChuyenBay: true, BaoCao: false, MayBay: false, TaiKhoan: false, CaiDat: false } },
+      { role: 'Quản trị', permissions: { ChuyenBay: true, VeChuyenBay: true, BaoCao: true, MayBay: true, TaiKhoan: true, CaiDat: true } },
+      { role: 'Ban giám đốc', permissions: { ChuyenBay: true, VeChuyenBay: false, BaoCao: true, MayBay: true, TaiKhoan: false, CaiDat: false } },
+      { role: 'Điều hành bay', permissions: { ChuyenBay: true, VeChuyenBay: false, BaoCao: false, MayBay: true, TaiKhoan: false, CaiDat: false } },
+      { role: 'Nhân viên', permissions: { ChuyenBay: false, VeChuyenBay: true, BaoCao: false, MayBay: false, TaiKhoan: false, CaiDat: false } },
     ]);
 
-    // 3. TẠO USER
+ // 3. TẠO USER
     console.log('👥 Tạo Users...');
     const defaultPassword = await hashPassword('flight123456');
 
+    // --- Tạo Super Admin ---
     await userRepo.save({
       name: 'Super Admin',
       email: 'admin@flight.com',
       password: defaultPassword,
-      role: 'admin'
+      // SỬA: Đổi thành object và dùng tên tiếng Việt khớp trong DB
+      role: { role: 'Quản trị' } 
     });
     
+    // --- Tạo Manager & Staff ---
     for (let i = 0; i < 10; i++) {
       const name = generateName();
+      // Logic random: 30% là Giám đốc, 70% là Nhân viên
+      const isManager = Math.random() > 0.7; 
+
       await userRepo.save({
         name,
         email: generateEmail(name, 'flightadmin.com'),
         password: defaultPassword,
-        role: Math.random() > 0.7 ? 'manager' : 'staff',
+        // SỬA: Map sang tên quyền tiếng Việt tương ứng
+        role: isManager ? { role: 'Ban giám đốc' } : { role: 'Nhân viên' },
         phone: `09${getRandomInt(10000000, 99999999)}`
       });
     }
@@ -132,7 +140,7 @@ async function bootstrap() {
         name,
         email: generateEmail(name, getRandomItem(['gmail.com', 'yahoo.com'])),
         password: defaultPassword,
-        role: 'user',
+        role: { role: 'Nhân viên' }, 
         phone: `03${getRandomInt(10000000, 99999999)}`
       });
       customers.push(user);

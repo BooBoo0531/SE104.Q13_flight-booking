@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { EditIcon, TrashIcon } from "../../components/common/Icons";
 import ConfirmationModal from "../../components/common/ConfirmationModal";
+import {
+    createAirport,
+    updateAirport,
+    deleteAirport,
+    createTicketClass,
+    updateTicketClass,
+    deleteTicketClass,
+    updateSettings,
+} from "../../services/api";
 
 const SettingsTab = ({ airports, ticketClasses, rules, onUpdateAirports, onUpdateTicketClasses, onUpdateRules }) => {
     const [localAirports, setLocalAirports] = useState(airports);
@@ -22,14 +31,105 @@ const SettingsTab = ({ airports, ticketClasses, rules, onUpdateAirports, onUpdat
 
     useEffect(() => { setLocalAirports(airports); setLocalTicketClasses(ticketClasses); setLocalRules(rules); }, [airports, ticketClasses, rules]);
 
-    const handleAirportSubmit = (e) => { e.preventDefault(); if(editingAirport) { onUpdateAirports(localAirports.map(a => a.id === editingAirport.id ? {...a, ...airportData} : a)); } else { onUpdateAirports([...localAirports, {id: Date.now(), ...airportData}]); } setEditingAirport(null); setAirportData({ name: '', city: '', country: '' }); };
-    const handleEditAirport = (airport) => { setEditingAirport(airport); setAirportData(airport); }
-    const handleTicketClassSubmit = (e) => { e.preventDefault(); if(editingTicketClass) { onUpdateTicketClasses(localTicketClasses.map(tc => tc.id === editingTicketClass.id ? {...tc, ...ticketClassData} : tc)); } else { onUpdateTicketClasses([...localTicketClasses, {id: Date.now(), ...ticketClassData}]); } setEditingTicketClass(null); setTicketClassData({ name: '', percentage: '' }); }
-    const handleEditTicketClass = (ticketClass) => { setEditingTicketClass(ticketClass); setTicketClassData(ticketClass); }
+    const handleAirportSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            let next = [];
+            if (editingAirport) {
+                const updated = await updateAirport(editingAirport.id, {
+                    name: airportData.name,
+                    city: airportData.city,
+                    country: airportData.country,
+                });
+                next = localAirports.map(a => a.id === editingAirport.id ? updated : a);
+            } else {
+                const created = await createAirport({
+                    name: airportData.name,
+                    city: airportData.city,
+                    country: airportData.country,
+                });
+                next = [...localAirports, created];
+            }
+            onUpdateAirports(next);
+            setEditingAirport(null);
+            setAirportData({ name: '', city: '', country: '' });
+        } catch (err) {
+            console.error(err);
+            alert(err?.response?.data?.message || 'Không thể lưu sân bay');
+        }
+    };
+
+    const handleEditAirport = (airport) => {
+        setEditingAirport(airport);
+        setAirportData({ name: airport.name, city: airport.city, country: airport.country });
+    }
+
+    const handleTicketClassSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const payload = {
+                name: ticketClassData.name,
+                percentage: Number(ticketClassData.percentage),
+            };
+            let next = [];
+            if (editingTicketClass) {
+                const updated = await updateTicketClass(editingTicketClass.id, payload);
+                next = localTicketClasses.map(tc => tc.id === editingTicketClass.id ? updated : tc);
+            } else {
+                const created = await createTicketClass(payload);
+                next = [...localTicketClasses, created];
+            }
+            onUpdateTicketClasses(next);
+            setEditingTicketClass(null);
+            setTicketClassData({ name: '', percentage: '' });
+        } catch (err) {
+            console.error(err);
+            alert(err?.response?.data?.message || 'Không thể lưu hạng vé');
+        }
+    }
+
+    const handleEditTicketClass = (ticketClass) => {
+        setEditingTicketClass(ticketClass);
+        setTicketClassData({ name: ticketClass.name, percentage: ticketClass.percentage });
+    }
     const handleRuleChange = (e) => { const {name, value} = e.target; setLocalRules(prev => ({...prev, [name]: value})); }
-    const handleSaveRules = () => { onUpdateRules(localRules); setSaveRulesButtonText("Đã lưu!"); setTimeout(() => setSaveRulesButtonText("Lưu"), 2000); }
+    const handleSaveRules = async () => {
+        try {
+            const payload = {
+                minFlightTime: Number(localRules.minFlightTime),
+                maxStopovers: Number(localRules.maxStopovers),
+                minStopTime: Number(localRules.minStopTime),
+                maxStopTime: Number(localRules.maxStopTime),
+                latestBookingTime: Number(localRules.latestBookingTime),
+                latestCancelTime: Number(localRules.latestCancelTime),
+            };
+            const updated = await updateSettings(payload);
+            onUpdateRules(updated);
+            setSaveRulesButtonText("Đã lưu!");
+            setTimeout(() => setSaveRulesButtonText("Lưu"), 2000);
+        } catch (err) {
+            console.error(err);
+            alert(err?.response?.data?.message || 'Không thể lưu quy định');
+        }
+    }
     const handleDeleteClick = (type, id) => { setItemToDelete({ type, id }); };
-    const confirmDelete = () => { if (!itemToDelete) return; if (itemToDelete.type === 'airport') { onUpdateAirports(localAirports.filter(a => a.id !== itemToDelete.id)); } else if (itemToDelete.type === 'ticketClass') { onUpdateTicketClasses(localTicketClasses.filter(tc => tc.id !== itemToDelete.id)); } setItemToDelete(null); };
+    const confirmDelete = async () => {
+        if (!itemToDelete) return;
+        try {
+            if (itemToDelete.type === 'airport') {
+                await deleteAirport(itemToDelete.id);
+                onUpdateAirports(localAirports.filter(a => a.id !== itemToDelete.id));
+            } else if (itemToDelete.type === 'ticketClass') {
+                await deleteTicketClass(itemToDelete.id);
+                onUpdateTicketClasses(localTicketClasses.filter(tc => tc.id !== itemToDelete.id));
+            }
+            setItemToDelete(null);
+        } catch (err) {
+            console.error(err);
+            alert(err?.response?.data?.message || 'Không thể xóa');
+            setItemToDelete(null);
+        }
+    };
     const cancelDelete = () => setItemToDelete(null);
 
     return(

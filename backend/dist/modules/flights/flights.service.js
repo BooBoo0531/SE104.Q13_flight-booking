@@ -14,8 +14,8 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FlightsService = void 0;
 const common_1 = require("@nestjs/common");
-const typeorm_1 = require("typeorm");
-const typeorm_2 = require("@nestjs/typeorm");
+const typeorm_1 = require("@nestjs/typeorm");
+const typeorm_2 = require("typeorm");
 const flight_entity_1 = require("./entities/flight.entity");
 const setting_entity_1 = require("../settings/entities/setting.entity");
 const intermediate_airport_entity_1 = require("../intermediate-airports/entities/intermediate-airport.entity");
@@ -29,9 +29,12 @@ let FlightsService = class FlightsService {
         this.intermediateRepo = intermediateRepo;
     }
     async create(dto) {
-        const input = dto;
         const settings = await this.settingRepo.findOne({ where: { id: 1 } });
         const minFlightTime = settings ? settings.minFlightTime : 30;
+<<<<<<< HEAD
+        const startTime = new Date(dto.startTime);
+        const endTime = new Date(dto.endTime);
+=======
         const maxIntermediateAirports = settings ? settings.maxIntermediateAirports : 2;
         const minStopoverTime = settings ? settings.minStopoverTime : 10;
         const maxStopoverTime = settings ? settings.maxStopoverTime : 20;
@@ -45,6 +48,7 @@ let FlightsService = class FlightsService {
         if (hoursUntilFlight < 72) {
             throw new common_1.BadRequestException(`Vi phạm quy định: Chỉ được tạo chuyến bay trước ít nhất 72 giờ. Hiện tại chỉ còn ${Math.floor(hoursUntilFlight)} giờ.`);
         }
+>>>>>>> origin/main
         if (endTime.getTime() <= startTime.getTime()) {
             throw new common_1.BadRequestException('Lỗi: Thời gian hạ cánh phải sau thời gian cất cánh!');
         }
@@ -63,12 +67,12 @@ let FlightsService = class FlightsService {
             }
         }
         const newFlight = this.flightRepo.create({
-            ...input,
-            duration: duration,
-            availableSeats: input.totalSeats,
-            plane: input.planeId ? { id: input.planeId } : undefined,
-            fromAirport: input.fromAirportId ? { id: input.fromAirportId } : undefined,
-            toAirport: input.toAirportId ? { id: input.toAirportId } : undefined,
+            ...dto,
+            duration,
+            availableSeats: dto.totalSeats,
+            plane: dto.planeId ? { id: dto.planeId } : undefined,
+            fromAirport: dto.fromAirportId ? { id: dto.fromAirportId } : undefined,
+            toAirport: dto.toAirportId ? { id: dto.toAirportId } : undefined,
         });
         const savedFlight = await this.flightRepo.save(newFlight);
         if (input.intermediateAirports && input.intermediateAirports.length > 0) {
@@ -85,10 +89,15 @@ let FlightsService = class FlightsService {
     }
     async findAll() {
         return await this.flightRepo.find({
+<<<<<<< HEAD
+            relations: ['plane', 'fromAirport', 'toAirport'],
+            order: { startTime: 'ASC' },
+=======
             relations: ['plane', 'fromAirport', 'toAirport', 'intermediates', 'intermediates.airport'],
             order: {
                 startTime: 'ASC',
             },
+>>>>>>> origin/main
         });
     }
     async findOne(id) {
@@ -98,6 +107,15 @@ let FlightsService = class FlightsService {
         });
     }
     async update(id, dto) {
+<<<<<<< HEAD
+        const flight = await this.flightRepo.findOne({ where: { id } });
+        if (!flight)
+            throw new common_1.BadRequestException('Không tìm thấy chuyến bay');
+        if (dto.startTime && dto.endTime) {
+            const startTime = new Date(dto.startTime);
+            const endTime = new Date(dto.endTime);
+            if (endTime.getTime() <= startTime.getTime()) {
+=======
         const input = dto;
         const flight = await this.flightRepo.findOne({ where: { id } });
         if (!flight) {
@@ -116,6 +134,7 @@ let FlightsService = class FlightsService {
             const newStartTime = new Date(input.startTime);
             const endTime = new Date(input.endTime);
             if (endTime.getTime() <= newStartTime.getTime()) {
+>>>>>>> origin/main
                 throw new common_1.BadRequestException('Thời gian hạ cánh phải sau thời gian cất cánh!');
             }
             const duration = (endTime.getTime() - startTime.getTime()) / 60000;
@@ -124,6 +143,25 @@ let FlightsService = class FlightsService {
             if (duration < minFlightTime) {
                 throw new common_1.BadRequestException(`Thời gian bay quá ngắn (${Math.floor(duration)} phút). Tối thiểu: ${minFlightTime} phút.`);
             }
+<<<<<<< HEAD
+            dto.duration = duration;
+        }
+        const ticketsSold = flight.totalSeats - flight.availableSeats;
+        Object.assign(flight, {
+            ...dto,
+            plane: dto.planeId ? { id: dto.planeId } : flight.plane,
+            fromAirport: dto.fromAirportId
+                ? { id: dto.fromAirportId }
+                : flight.fromAirport,
+            toAirport: dto.toAirportId
+                ? { id: dto.toAirportId }
+                : flight.toAirport,
+        });
+        if (dto.totalSeats !== undefined) {
+            flight.availableSeats = dto.totalSeats - ticketsSold;
+        }
+        return await this.flightRepo.save(flight);
+=======
             input.duration = duration;
         }
         const ticketsSold = flight.totalSeats - flight.availableSeats;
@@ -161,10 +199,17 @@ let FlightsService = class FlightsService {
             }
         }
         return savedFlight;
+>>>>>>> origin/main
     }
     async remove(id) {
         const flight = await this.flightRepo.findOne({
             where: { id },
+<<<<<<< HEAD
+            relations: ['tickets'],
+        });
+        if (!flight)
+            throw new common_1.BadRequestException('Không tìm thấy chuyến bay');
+=======
             relations: ['tickets']
         });
         if (!flight) {
@@ -178,6 +223,7 @@ let FlightsService = class FlightsService {
         if (hoursUntilFlight < 72) {
             throw new common_1.BadRequestException(`Vi phạm quy định: Chỉ được hủy chuyến bay trước ít nhất 72 giờ. Hiện tại chỉ còn ${Math.floor(hoursUntilFlight)} giờ.`);
         }
+>>>>>>> origin/main
         if (flight.tickets && flight.tickets.length > 0) {
             throw new common_1.BadRequestException('Không thể xóa chuyến bay đã có vé được đặt');
         }
@@ -188,11 +234,18 @@ let FlightsService = class FlightsService {
 exports.FlightsService = FlightsService;
 exports.FlightsService = FlightsService = __decorate([
     (0, common_1.Injectable)(),
+<<<<<<< HEAD
+    __param(0, (0, typeorm_1.InjectRepository)(flight_entity_1.Flight)),
+    __param(1, (0, typeorm_1.InjectRepository)(setting_entity_1.Setting)),
+    __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository])
+=======
     __param(0, (0, typeorm_2.InjectRepository)(flight_entity_1.Flight)),
     __param(1, (0, typeorm_2.InjectRepository)(setting_entity_1.Setting)),
     __param(2, (0, typeorm_2.InjectRepository)(intermediate_airport_entity_1.IntermediateAirport)),
     __metadata("design:paramtypes", [typeorm_1.Repository,
         typeorm_1.Repository,
         typeorm_1.Repository])
+>>>>>>> origin/main
 ], FlightsService);
 //# sourceMappingURL=flights.service.js.map

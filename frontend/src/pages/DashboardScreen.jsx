@@ -2,7 +2,20 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import axios from "axios";
-import { getFlights, createFlight, updateFlight, deleteFlight, getAirports, getAirplanes } from "../services/api";
+import {
+  getFlights,
+  createFlight,
+  updateFlight,
+  deleteFlight,
+  getAirports,
+  getAirplanes,
+  getSettings,
+  getTicketClasses,
+  getTickets,
+  createTicket,
+  updateTicket,
+  deleteTicket,
+} from "../services/api";
 
 import Header from "../layouts/Header";
 import Sidebar from "../layouts/Sidebar";
@@ -30,16 +43,19 @@ export default function DashboardScreen() {
   const [users, setUsers] = useState([]); 
   const [airports, setAirports] = useState([]); 
 
-  const [ticketClasses, setTicketClasses] = useState([
-      {id: 1, name: 'Phổ thông', percentage: 100},
-      {id: 2, name: 'Thương gia', percentage: 105},
-  ]);
+  const [ticketClasses, setTicketClasses] = useState([]);
   
   const [rules, setRules] = useState({
-      minFlightTime: 30, maxStopovers: 2, minStopTime: 10, maxStopTime: 20, latestBookingTime: 1, latestCancelTime: 1,
+      minFlightTime: 30,
+      maxStopovers: 2,
+      minStopTime: 10,
+      maxStopTime: 20,
+      latestBookingTime: 1,
+      latestCancelTime: 1,
   });
 
   const [permissions, setPermissions] = useState({});
+  const [flightToBook, setFlightToBook] = useState(null);
 
   useEffect(() => {
     const initDashboard = async () => {
@@ -105,17 +121,27 @@ export default function DashboardScreen() {
       try {
         setLoading(true);
         
-        // Load flights, airports và airplanes song song từ API
-        const [flightsData, airportsData, airplanesData] = await Promise.all([
+        // Load flights, airports, airplanes, settings, ticket-classes song song từ API
+        const [flightsData, airportsData, airplanesData, settingsData, ticketClassesData] = await Promise.all([
           getFlights(),
           getAirports(),
-          getAirplanes()
+          getAirplanes(),
+          getSettings(),
+          getTicketClasses(),
         ]);
+
+        // Tickets có phân quyền -> nếu không đủ quyền / hết token thì để rỗng
+        let ticketsData = [];
+        try {
+          ticketsData = await getTickets();
+        } catch (e) {
+          ticketsData = [];
+        }
         
         // Format flights data từ backend sang frontend format
         const formattedFlights = flightsData.map(flight => ({
           id: flight.flightCode,
-          backendId: flight.id, 
+          backendId: flight.id, // Lưu ID backend để update/delete
           fromAirport: flight.fromAirport.name,
           fromCity: flight.fromAirport.city,
           toAirport: flight.toAirport.name,
@@ -133,12 +159,7 @@ export default function DashboardScreen() {
           minute: new Date(flight.startTime).getMinutes(),
           businessSeats: flight.plane.businessSeats,
           economySeats: flight.plane.economySeats,
-          intermediateAirports: flight.intermediates?.map(inter => ({
-            id: inter.id,
-            name: inter.airport.name,
-            duration: inter.duration,
-            notes: inter.note || ''
-          })) || []
+          intermediateAirports: [] // TODO: Load từ API nếu có
         }));
         
         // Format airports data
@@ -164,6 +185,12 @@ export default function DashboardScreen() {
         setFlights(formattedFlights);
         setAirports(formattedAirports);
         setAirplanes(formattedAirplanes);
+        setRules(settingsData);
+        setTicketClasses(Array.isArray(ticketClassesData) && ticketClassesData.length ? ticketClassesData : [
+          { id: 1, name: 'Phổ thông', percentage: 100 },
+          { id: 2, name: 'Thương gia', percentage: 105 },
+        ]);
+        setTickets(ticketsData);
         setError(null);
       } catch (err) {
         console.error('Lỗi tải dữ liệu:', err);
@@ -175,6 +202,40 @@ export default function DashboardScreen() {
     
     loadData();
   }, [allowedTabs]); 
+
+  const formatFlightsData = (flightsData) =>
+    flightsData.map((flight) => ({
+      id: flight.flightCode,
+      backendId: flight.id,
+      fromAirport: flight.fromAirport.name,
+      fromCity: flight.fromAirport.city,
+      toAirport: flight.toAirport.name,
+      toCity: flight.toAirport.city,
+      date: new Date(flight.startTime).toISOString().split("T")[0],
+      time: `${new Date(flight.startTime).toLocaleTimeString("vi-VN", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}-${new Date(flight.endTime).toLocaleTimeString("vi-VN", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`,
+      seatsEmpty: flight.availableSeats,
+      seatsTaken: flight.totalSeats - flight.availableSeats,
+      planeId: flight.plane.code,
+      price: flight.price,
+      duration: flight.duration,
+      status: flight.status,
+      hour: new Date(flight.startTime).getHours(),
+      minute: new Date(flight.startTime).getMinutes(),
+      businessSeats: flight.plane.businessSeats,
+      economySeats: flight.plane.economySeats,
+      intermediateAirports: [],
+    }));
+
+  const refreshFlights = async () => {
+    const flightsData = await getFlights();
+    setFlights(formatFlightsData(flightsData));
+  };
 
 
   const calculateFlightTime = (hourStr, minuteStr, durationStr) => {
@@ -384,28 +445,47 @@ export default function DashboardScreen() {
       }
   };
 
-  const handleCreateTicket = (newTicket) => {
-      setTickets([...tickets, newTicket]);
-      const flightToUpdate = flights.find(f => f.id === newTicket.flightId);
-      if (flightToUpdate) {
-          const updatedFlight = { ...flightToUpdate, seatsTaken: flightToUpdate.seatsTaken + 1, seatsEmpty: flightToUpdate.seatsEmpty - 1, };
-          handleUpdateFlight(updatedFlight);
-      }
-      alert(`Tạo vé ${newTicket.ticketId} thành công!`);
-      setFlightToBook(null);
-  };
-  
-  const handleUpdateTicket = (updatedTicket) => { setTickets(tickets.map(t => t.ticketId === updatedTicket.ticketId ? updatedTicket : t)); };
+  const handleCreateTicket = async (newTicket) => {
+  try {
+    setTickets([...tickets, newTicket]);
+    const flightToUpdate = flights.find(f => f.id === newTicket.flightId);
+    if (flightToUpdate) {
+      const updatedFlight = { 
+        ...flightToUpdate, 
+        seatsTaken: flightToUpdate.seatsTaken + 1, 
+        seatsEmpty: flightToUpdate.seatsEmpty - 1 
+      };
+      handleUpdateFlight(updatedFlight);
+    }
+    alert(`Tạo vé ${newTicket.ticketId} thành công!`);
+    setFlightToBook(null);
+  } catch (err) {
+    console.error('Lỗi tạo vé:', err);
+    alert(err?.response?.data?.message || 'Không thể tạo vé');
+  }
+};
 
-  const handleDeleteTicket = (ticketId) => {
-      const ticketToDelete = tickets.find(t => t.ticketId === ticketId);
-      if(!ticketToDelete) return;
-      setTickets(tickets.filter(t => t.ticketId !== ticketId));
-      const flightToUpdate = flights.find(f => f.id === ticketToDelete.flightId);
-      if (flightToUpdate) {
-          const updatedFlight = { ...flightToUpdate, seatsTaken: flightToUpdate.seatsTaken - 1, seatsEmpty: flightToUpdate.seatsEmpty + 1, };
-          handleUpdateFlight(updatedFlight);
-      }
+  const handleUpdateTicket = async (updatedTicket) => {
+    try {
+      const updated = await updateTicket(updatedTicket.ticketId, updatedTicket);
+      setTickets((prev) => prev.map((t) => (t.ticketId === updated.ticketId ? updated : t)));
+      alert(`Cập nhật vé ${updated.ticketId} thành công!`);
+    } catch (err) {
+      console.error('Lỗi cập nhật vé:', err);
+      alert(err?.response?.data?.message || 'Không thể cập nhật vé');
+    }
+  };
+
+  const handleDeleteTicket = async (ticketId) => {
+    try {
+      await deleteTicket(ticketId);
+      setTickets((prev) => prev.filter((t) => t.ticketId !== ticketId));
+      await refreshFlights();
+      alert(`Đã xóa vé ${ticketId}`);
+    } catch (err) {
+      console.error('Lỗi xóa vé:', err);
+      alert(err?.response?.data?.message || 'Không thể xóa vé');
+    }
   };
 
   const handleCreateAirplane = (newAirplaneData) => { setAirplanes([...airplanes, { ...newAirplaneData, id: `PE${Math.floor(1000 + Math.random() * 9000)}` }]); }

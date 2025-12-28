@@ -1,10 +1,11 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { Flight } from './entities/flight.entity';
 import { Setting } from '../settings/entities/setting.entity';
 import { IntermediateAirport } from '../intermediate-airports/entities/intermediate-airport.entity';
 import { CreateFlightDto } from './dto/create-flight.dto';
+import { UpdateFlightDto } from './dto/update-flight.dto';
 
 @Injectable()
 export class FlightsService {
@@ -56,7 +57,7 @@ export class FlightsService {
 
     if (duration < minFlightTime) {
       throw new BadRequestException(
-        `Vi phạm quy định: Thời gian bay quá ngắn (${Math.floor(duration)} phút). Tối thiểu phải là ${minFlightTime} phút.`
+        'Lỗi: Thời gian hạ cánh phải sau thời gian cất cánh!',
       );
     }
 

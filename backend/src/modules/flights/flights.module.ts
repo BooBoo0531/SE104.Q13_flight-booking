@@ -6,8 +6,19 @@ import { Flight } from './entities/flight.entity';
 import { Setting } from '../settings/entities/setting.entity';
 import { IntermediateAirport } from '../intermediate-airports/entities/intermediate-airport.entity';
 
+// ✅ thêm 2 entity này
+import { IntermediateAirport } from '../intermediate-airports/entities/intermediate-airport.entity';
+import { FlightTicketClass } from '../flight-ticket-classes/entities/flight-ticket-class.entity';
+
 @Module({
-  imports: [TypeOrmModule.forFeature([Flight, Setting, IntermediateAirport])],
+  imports: [
+    TypeOrmModule.forFeature([
+      Flight,
+      Setting,
+      IntermediateAirport, // ✅ quan trọng
+      FlightTicketClass,   // ✅ nên thêm để khỏi lỗi dây chuyền
+    ]),
+  ],
   providers: [FlightsService],
   controllers: [FlightsController],
 })

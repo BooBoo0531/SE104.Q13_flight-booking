@@ -42,14 +42,28 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
+<<<<<<< HEAD
+=======
 const flights_module_1 = require("./modules/flights/flights.module");
 const auth_module_1 = require("./auth/auth.module");
 const airplanes_module_1 = require("./modules/airplanes/airplanes.module");
 const airports_module_1 = require("./modules/airports/airports.module");
 const users_module_1 = require("./modules/users/users.module");
 const reports_module_1 = require("./modules/reports/reports.module");
+>>>>>>> origin/main
 const dotenv = __importStar(require("dotenv"));
+const path_1 = require("path");
+const auth_module_1 = require("./auth/auth.module");
+const flights_module_1 = require("./modules/flights/flights.module");
+const airplanes_module_1 = require("./modules/airplanes/airplanes.module");
+const airports_module_1 = require("./modules/airports/airports.module");
+const users_module_1 = require("./modules/users/users.module");
+const reports_module_1 = require("./modules/reports/reports.module");
+const settings_module_1 = require("./modules/settings/settings.module");
+const ticket_classes_module_1 = require("./modules/ticket-classes/ticket-classes.module");
+const tickets_module_1 = require("./modules/tickets/tickets.module");
 dotenv.config();
+const useSSL = (process.env.DB_SSL ?? process.env.DATABASE_SSL ?? 'true') === 'true';
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -59,22 +73,27 @@ exports.AppModule = AppModule = __decorate([
             typeorm_1.TypeOrmModule.forRoot({
                 type: 'postgres',
                 url: process.env.DATABASE_URL,
-                ssl: true,
-                extra: {
-                    ssl: {
-                        rejectUnauthorized: false,
-                    },
-                },
-                entities: [__dirname + '/**/*.entity{.ts,.js}'],
-                synchronize: true,
+                ssl: useSSL,
+                extra: useSSL ? { ssl: { rejectUnauthorized: false } } : undefined,
+                entities: [(0, path_1.join)(__dirname, '**', '*.entity{.ts,.js}')],
                 autoLoadEntities: true,
+                synchronize: true,
             }),
-            flights_module_1.FlightsModule,
             auth_module_1.AuthModule,
+<<<<<<< HEAD
+            flights_module_1.FlightsModule,
+=======
+>>>>>>> origin/main
             airplanes_module_1.AirplanesModule,
             airports_module_1.AirportsModule,
             users_module_1.UsersModule,
             reports_module_1.ReportsModule,
+<<<<<<< HEAD
+            settings_module_1.SettingsModule,
+            ticket_classes_module_1.TicketClassesModule,
+            tickets_module_1.TicketsModule,
+=======
+>>>>>>> origin/main
         ],
     })
 ], AppModule);

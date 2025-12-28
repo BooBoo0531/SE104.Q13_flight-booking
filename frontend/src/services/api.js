@@ -88,6 +88,86 @@ export const getAirports = async () => {
   return response.data;
 };
 
+/**
+ * Tạo sân bay (chỉ Quản trị)
+ */
+export const createAirport = async (airportData) => {
+  const response = await api.post('/airports', airportData);
+  return response.data;
+};
+
+/**
+ * Cập nhật sân bay (chỉ Quản trị)
+ */
+export const updateAirport = async (id, airportData) => {
+  const response = await api.patch(`/airports/${id}`, airportData);
+  return response.data;
+};
+
+/**
+ * Xóa sân bay (chỉ Quản trị)
+ */
+export const deleteAirport = async (id) => {
+  const response = await api.delete(`/airports/${id}`);
+  return response.data;
+};
+
+// ==================== SETTINGS API ====================
+
+export const getSettings = async () => {
+  const response = await api.get('/settings');
+  return response.data;
+};
+
+export const updateSettings = async (settingsData) => {
+  const response = await api.patch('/settings', settingsData);
+  return response.data;
+};
+
+// ==================== TICKET CLASSES API ====================
+
+export const getTicketClasses = async () => {
+  const response = await api.get('/ticket-classes');
+  return response.data;
+};
+
+export const createTicketClass = async (data) => {
+  const response = await api.post('/ticket-classes', data);
+  return response.data;
+};
+
+export const updateTicketClass = async (id, data) => {
+  const response = await api.patch(`/ticket-classes/${id}`, data);
+  return response.data;
+};
+
+export const deleteTicketClass = async (id) => {
+  const response = await api.delete(`/ticket-classes/${id}`);
+  return response.data;
+};
+
+// ==================== TICKETS API ====================
+
+export const getTickets = async () => {
+  const response = await api.get('/tickets');
+  return response.data;
+};
+
+export const createTicket = async (data) => {
+  const response = await api.post('/tickets', data);
+  return response.data;
+};
+
+export const updateTicket = async (ticketId, data) => {
+  const response = await api.patch(`/tickets/${ticketId}`, data);
+  return response.data;
+};
+
+export const deleteTicket = async (ticketId) => {
+  const response = await api.delete(`/tickets/${ticketId}`);
+  return response.data;
+};
+
 // ==================== AIRPLANES API ====================
 
 /**

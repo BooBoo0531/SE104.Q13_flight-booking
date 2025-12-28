@@ -17,10 +17,9 @@ export class IntermediateAirportDto {
 }
 
 export class CreateFlightDto {
-  // 1. Thông tin cơ bản
   @IsString()
   @IsNotEmpty()
-  flightCode: string; 
+  flightCode: string;
 
   @IsNumber()
   @Min(0)
@@ -32,7 +31,7 @@ export class CreateFlightDto {
 
   @IsDateString()
   @IsNotEmpty()
-  startTime: string; 
+  startTime: string;
 
   @IsDateString()
   @IsNotEmpty()
@@ -40,11 +39,11 @@ export class CreateFlightDto {
 
   @IsInt()
   @IsNotEmpty()
-  planeId: number; // ID máy bay
+  planeId: number;
 
   @IsInt()
   @IsNotEmpty()
-  fromAirportId: number; // ID sân bay đi
+  fromAirportId: number;
 
   @IsInt()
   @IsNotEmpty()

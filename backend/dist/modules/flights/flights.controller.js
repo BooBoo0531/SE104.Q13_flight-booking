@@ -16,6 +16,7 @@ exports.FlightsController = void 0;
 const common_1 = require("@nestjs/common");
 const flights_service_1 = require("./flights.service");
 const create_flight_dto_1 = require("./dto/create-flight.dto");
+const update_flight_dto_1 = require("./dto/update-flight.dto");
 const jwt_auth_guard_1 = require("../../auth/jwt-auth.guard");
 const roles_decorator_1 = require("../../auth/roles.decorator");
 const roles_guard_1 = require("../../auth/roles.guard");
@@ -80,7 +81,11 @@ __decorate([
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
+<<<<<<< HEAD
+    __metadata("design:paramtypes", [String, update_flight_dto_1.UpdateFlightDto]),
+=======
     __metadata("design:paramtypes", [String, create_flight_dto_1.CreateFlightDto]),
+>>>>>>> origin/main
     __metadata("design:returntype", void 0)
 ], FlightsController.prototype, "update", null);
 __decorate([

@@ -1,4 +1,20 @@
-import { IsDateString, IsInt, IsNotEmpty, IsNumber, IsString, Min } from 'class-validator';
+import { IsString, IsNotEmpty, IsInt, IsDateString, IsNumber, Min, IsArray, IsOptional, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+
+// DTO cho sân bay trung gian
+export class IntermediateAirportDto {
+  @IsInt()
+  @IsNotEmpty()
+  airportId: number;
+
+  @IsInt()
+  @Min(10, { message: 'Thời gian dừng phải lớn hơn hoặc bằng 10 phút' })
+  duration: number; 
+
+  @IsString()
+  @IsOptional()
+  note?: string;
+}
 
 export class CreateFlightDto {
   @IsString()
@@ -31,5 +47,12 @@ export class CreateFlightDto {
 
   @IsInt()
   @IsNotEmpty()
-  toAirportId: number;
+  toAirportId: number; // ID sân bay đến
+
+  // 4. Sân bay trung gian 
+  @IsArray()
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => IntermediateAirportDto)
+  intermediateAirports?: IntermediateAirportDto[];
 }

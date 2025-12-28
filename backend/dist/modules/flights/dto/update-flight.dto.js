@@ -1,4 +1,5 @@
 "use strict";
+<<<<<<< HEAD
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -71,4 +72,13 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], UpdateFlightDto.prototype, "status", void 0);
+=======
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.UpdateFlightDto = void 0;
+const mapped_types_1 = require("@nestjs/mapped-types");
+const create_flight_dto_1 = require("./create-flight.dto");
+class UpdateFlightDto extends (0, mapped_types_1.PartialType)(create_flight_dto_1.CreateFlightDto) {
+}
+exports.UpdateFlightDto = UpdateFlightDto;
+>>>>>>> origin/main
 //# sourceMappingURL=update-flight.dto.js.map

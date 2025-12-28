@@ -4,6 +4,7 @@ import { FlightsService } from './flights.service';
 import { FlightsController } from './flights.controller';
 import { Flight } from './entities/flight.entity';
 import { Setting } from '../settings/entities/setting.entity';
+import { IntermediateAirport } from '../intermediate-airports/entities/intermediate-airport.entity';
 
 // ✅ thêm 2 entity này
 import { IntermediateAirport } from '../intermediate-airports/entities/intermediate-airport.entity';

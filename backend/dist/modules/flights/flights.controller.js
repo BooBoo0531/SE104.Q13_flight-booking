@@ -81,7 +81,11 @@ __decorate([
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
+<<<<<<< HEAD
     __metadata("design:paramtypes", [String, update_flight_dto_1.UpdateFlightDto]),
+=======
+    __metadata("design:paramtypes", [String, create_flight_dto_1.CreateFlightDto]),
+>>>>>>> origin/main
     __metadata("design:returntype", void 0)
 ], FlightsController.prototype, "update", null);
 __decorate([

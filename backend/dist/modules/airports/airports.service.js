@@ -17,6 +17,7 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const airport_entity_1 = require("./entities/airport.entity");
+<<<<<<< HEAD
 const flight_entity_1 = require("../flights/entities/flight.entity");
 let AirportsService = class AirportsService {
     airportsRepository;
@@ -90,14 +91,34 @@ let AirportsService = class AirportsService {
         }
         await this.airportsRepository.remove(airport);
         return { message: 'Xóa sân bay thành công' };
+=======
+let AirportsService = class AirportsService {
+    airportsRepository;
+    constructor(airportsRepository) {
+        this.airportsRepository = airportsRepository;
+    }
+    findAll() {
+        return this.airportsRepository.find({
+            order: { id: 'ASC' },
+        });
+    }
+    findOne(id) {
+        return this.airportsRepository.findOne({
+            where: { id },
+        });
+>>>>>>> origin/main
     }
 };
 exports.AirportsService = AirportsService;
 exports.AirportsService = AirportsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(airport_entity_1.Airport)),
+<<<<<<< HEAD
     __param(1, (0, typeorm_1.InjectRepository)(flight_entity_1.Flight)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository])
+=======
+    __metadata("design:paramtypes", [typeorm_2.Repository])
+>>>>>>> origin/main
 ], AirportsService);
 //# sourceMappingURL=airports.service.js.map

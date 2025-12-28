@@ -15,11 +15,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AirportsController = void 0;
 const common_1 = require("@nestjs/common");
 const airports_service_1 = require("./airports.service");
+<<<<<<< HEAD
 const create_airport_dto_1 = require("./dto/create-airport.dto");
 const update_airport_dto_1 = require("./dto/update-airport.dto");
 const jwt_auth_guard_1 = require("../../auth/jwt-auth.guard");
 const roles_decorator_1 = require("../../auth/roles.decorator");
 const roles_guard_1 = require("../../auth/roles.guard");
+=======
+>>>>>>> origin/main
 let AirportsController = class AirportsController {
     airportsService;
     constructor(airportsService) {
@@ -31,6 +34,7 @@ let AirportsController = class AirportsController {
     findOne(id) {
         return this.airportsService.findOne(+id);
     }
+<<<<<<< HEAD
     create(dto) {
         return this.airportsService.create(dto);
     }
@@ -40,6 +44,8 @@ let AirportsController = class AirportsController {
     remove(id) {
         return this.airportsService.remove(+id);
     }
+=======
+>>>>>>> origin/main
 };
 exports.AirportsController = AirportsController;
 __decorate([
@@ -55,6 +61,7 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], AirportsController.prototype, "findOne", null);
+<<<<<<< HEAD
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('Quản trị'),
@@ -83,6 +90,8 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], AirportsController.prototype, "remove", null);
+=======
+>>>>>>> origin/main
 exports.AirportsController = AirportsController = __decorate([
     (0, common_1.Controller)('airports'),
     __metadata("design:paramtypes", [airports_service_1.AirportsService])

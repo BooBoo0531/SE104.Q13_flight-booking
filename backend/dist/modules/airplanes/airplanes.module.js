@@ -12,13 +12,20 @@ const typeorm_1 = require("@nestjs/typeorm");
 const airplanes_service_1 = require("./airplanes.service");
 const airplanes_controller_1 = require("./airplanes.controller");
 const airplane_entity_1 = require("./entities/airplane.entity");
+<<<<<<< HEAD
 const seat_entity_1 = require("../seats/entities/seat.entity");
+=======
+>>>>>>> origin/main
 let AirplanesModule = class AirplanesModule {
 };
 exports.AirplanesModule = AirplanesModule;
 exports.AirplanesModule = AirplanesModule = __decorate([
     (0, common_1.Module)({
+<<<<<<< HEAD
         imports: [typeorm_1.TypeOrmModule.forFeature([airplane_entity_1.Airplane, seat_entity_1.Seat])],
+=======
+        imports: [typeorm_1.TypeOrmModule.forFeature([airplane_entity_1.Airplane])],
+>>>>>>> origin/main
         controllers: [airplanes_controller_1.AirplanesController],
         providers: [airplanes_service_1.AirplanesService],
     })

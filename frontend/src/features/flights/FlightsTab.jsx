@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { CalendarIcon, EditIcon, TrashIcon, PlusCircleIcon } from "../../components/common/Icons";
 import ConfirmationModal from "../../components/common/ConfirmationModal";
 
-// --- Sub-component: FlightDetail (Chi tiết chuyến bay read-only) ---
 const FlightDetail = ({ flight, onClose, onEdit }) => {
     if (!flight) return null;
     
@@ -129,7 +128,7 @@ const FlightDetail = ({ flight, onClose, onEdit }) => {
 };
 
 // --- Sub-component: FlightList (Cập nhật để nhận props phân quyền) ---
-const FlightList = ({ flights, onEdit, onDelete, onBookTicket, onViewDetails, canManage, canBook }) => {
+const FlightList = ({ flights, onEdit, onDelete, onViewDetails, canManage }) => {
     const [searchDate, setSearchDate] = useState('');
     const [fromCitySearch, setFromCitySearch] = useState('all');
     const [toCitySearch, setToCitySearch] = useState('all');
@@ -185,11 +184,6 @@ const FlightList = ({ flights, onEdit, onDelete, onBookTicket, onViewDetails, ca
                                 {(canManage || canBook) && (
                                     <td className="p-3" onClick={(e) => e.stopPropagation()}>
                                         <div className="flex items-center space-x-1">
-                                            {/* Nút Đặt vé - Ẩn nếu chuyến bay bị hủy hoặc đã hoàn thành */}
-                                            {canBook && f.status !== 'cancelled' && f.status !== 'completed' && (
-                                                <button onClick={() => onBookTicket(f)} className="bg-blue-500 text-white text-xs font-bold py-1 px-2 rounded hover:bg-blue-600">Đặt vé</button>
-                                            )}
-                                            
                                             {/* Nút Sửa/Xóa */}
                                             {canManage && (
                                                 <>
@@ -378,7 +372,7 @@ const FlightForm = ({ initialData, onSubmit, onCancel, airports, airplanes, rule
 };
 
 // --- Main Export: FlightsTab ---
-const FlightsTab = ({ flights, airports, airplanes, rules, onEdit, onDelete, onCreate, onBookTicket }) => {
+const FlightsTab = ({ flights, airports, airplanes, rules, onEdit, onDelete, onCreate }) => {
     const [subTab, setSubTab] = useState('list');
     const [editingFlight, setEditingFlight] = useState(null);
     const [flightToDelete, setFlightToDelete] = useState(null);
@@ -386,7 +380,6 @@ const FlightsTab = ({ flights, airports, airplanes, rules, onEdit, onDelete, onC
     // 👇 LOGIC PHÂN QUYỀN (MỚI THÊM)
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const canManage = ['Quản trị', 'Điều hành bay'].includes(user.role); // Sửa/Xóa/Thêm
-    const canBook = ['Quản trị', 'Nhân viên'].includes(user.role); // Đặt vé
     
     const handleEditClick = (flight) => { setEditingFlight(flight); setSubTab('edit'); };
     const handleViewDetails = (flight) => { setEditingFlight(flight); setSubTab('detail'); };
@@ -407,11 +400,9 @@ const FlightsTab = ({ flights, airports, airplanes, rules, onEdit, onDelete, onC
                         flights={flights} 
                         onEdit={handleEditClick} 
                         onDelete={handleDeleteClick} 
-                        onBookTicket={onBookTicket}
                         onViewDetails={handleViewDetails}
                         // 👇 Truyền quyền xuống FlightList
                         canManage={canManage}
-                        canBook={canBook}
                     />
                 );
             case 'detail':

@@ -40,7 +40,6 @@ export default function DashboardScreen() {
   });
 
   const [permissions, setPermissions] = useState({});
-  const [flightToBook, setFlightToBook] = useState(null);
 
   useEffect(() => {
     const initDashboard = async () => {
@@ -116,7 +115,7 @@ export default function DashboardScreen() {
         // Format flights data từ backend sang frontend format
         const formattedFlights = flightsData.map(flight => ({
           id: flight.flightCode,
-          backendId: flight.id, // Lưu ID backend để update/delete
+          backendId: flight.id, 
           fromAirport: flight.fromAirport.name,
           fromCity: flight.fromAirport.city,
           toAirport: flight.toAirport.name,
@@ -268,7 +267,6 @@ export default function DashboardScreen() {
   };
   const handleCreateFlight = async (newFlight) => {
       try {
-        // Chuyển đổi dữ liệu frontend sang backend format
         const plane = airplanes.find(p => p.id === newFlight.planeId);
         const fromAirport = airports.find(a => a.name === newFlight.fromAirport);
         const toAirport = airports.find(a => a.name === newFlight.toAirport);
@@ -277,17 +275,15 @@ export default function DashboardScreen() {
           alert('Vui lòng chọn đầy đủ sân bay và máy bay!');
           return;
         }
-        
-        // Tạo datetime local (không dùng Z để tránh lệch múi giờ)
+
         const startTime = new Date(`${newFlight.date}T${String(newFlight.hour).padStart(2, '0')}:${String(newFlight.minute).padStart(2, '0')}:00`);
         const endTime = new Date(startTime.getTime() + parseInt(newFlight.duration) * 60000);
-        
-        // Generate flightCode tự động: VN + random 4 số
+
         const flightCode = `VN${Math.floor(1000 + Math.random() * 9000)}`;
         
         // Chuyển đổi sân bay trung gian
         const intermediateAirports = newFlight.intermediateAirports
-          ?.filter(ia => ia.name) // Chỉ lấy những sân bay đã chọn
+          ?.filter(ia => ia.name) 
           .map(ia => {
             const airport = airports.find(a => a.name === ia.name);
             return {
@@ -296,7 +292,7 @@ export default function DashboardScreen() {
               note: ia.notes || ''
             };
           })
-          .filter(ia => ia.airportId); // Loại bỏ những sân bay không hợp lệ
+          .filter(ia => ia.airportId);
         
         const backendData = {
           flightCode: flightCode,
@@ -387,8 +383,6 @@ export default function DashboardScreen() {
         alert(err.response?.data?.message || 'Không thể xóa chuyến bay. Có thể đã có vé được đặt.');
       }
   };
-  
-  const handleBookTicket = (flight) => { setFlightToBook(flight); setActiveTab('Vé máy bay'); };
 
   const handleCreateTicket = (newTicket) => {
       setTickets([...tickets, newTicket]);
@@ -443,9 +437,9 @@ export default function DashboardScreen() {
   const renderTabContent = () => {
     switch(activeTab) {
       case 'Chuyến bay':
-        return <FlightsTab flights={flights} airports={airports} airplanes={airplanes} rules={rules} onEdit={handleUpdateFlight} onDelete={handleDeleteFlight} onCreate={handleCreateFlight} onBookTicket={handleBookTicket} />;
+        return <FlightsTab flights={flights} airports={airports} airplanes={airplanes} rules={rules} onEdit={handleUpdateFlight} onDelete={handleDeleteFlight} onCreate={handleCreateFlight} />;
       case 'Vé máy bay':
-        return <TicketsTab allFlights={flights} allAirplanes={airplanes} allTickets={tickets} flightToBook={flightToBook} onCreateTicket={handleCreateTicket} onUpdateTicket={handleUpdateTicket} onDeleteTicket={handleDeleteTicket} tickets={tickets} />;
+        return <TicketsTab allFlights={flights} allAirplanes={airplanes} allTickets={tickets} onCreateTicket={handleCreateTicket} onUpdateTicket={handleUpdateTicket} onDeleteTicket={handleDeleteTicket} tickets={tickets} />;
       case 'Báo cáo':
         return <ReportsTab />;
       case 'Máy bay':

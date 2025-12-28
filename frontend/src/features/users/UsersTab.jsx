@@ -22,13 +22,49 @@ const UserForm = ({ initialData, roles, onSubmit, onCancel }) => {
         }
     }, [initialData]);
 
-    const handleInputChange = (e) => { const {name, value} = e.target; setUserData(prev => ({...prev, [name]: value})); }
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        // Chuẩn hóa số điện thoại: chỉ lấy chữ số và giới hạn 10
+        if (name === 'phone') {
+            const digits = (value || '').replace(/\D/g, '').slice(0, 10);
+            setUserData(prev => ({ ...prev, phone: digits }));
+            return;
+        }
+        setUserData(prev => ({ ...prev, [name]: value }));
+    }
     
     const handleSubmit = (e) => { 
         e.preventDefault(); 
+        // Validate số điện thoại: đúng 10 chữ số (sau khi chuẩn hóa)
+        const phoneDigits = (userData.phone || '').replace(/\D/g, '');
+        const phoneOk = phoneDigits.length === 10;
+        if (!phoneOk) {
+            alert("Số điện thoại phải gồm đúng 10 chữ số.");
+            return;
+        }
+
+        // Validate mật khẩu: chỉ chữ số và dài > 5
+        const hasPassword = !!userData.password && userData.password.length > 0;
+        const passwordOk = /^\d{6,}$/.test(userData.password);
+        if (!isEditMode) {
+            // Tạo mới: bắt buộc mật khẩu hợp lệ
+            if (!hasPassword || !passwordOk) {
+                alert("Mật khẩu phải gồm tối thiểu 6 chữ số.");
+                return;
+            }
+        } else {
+            // Chỉnh sửa: nếu có nhập mật khẩu thì phải hợp lệ, nếu để trống thì bỏ qua
+            if (hasPassword && !passwordOk) {
+                alert("Mật khẩu phải gồm tối thiểu 6 chữ số.");
+                return;
+            }
+        }
+
         // Nếu đang edit mà password rỗng thì xóa trường password đi để backend không update nó
         const payload = { ...userData };
         if (isEditMode && !payload.password) delete payload.password;
+        // Gửi phone dưới dạng 10 chữ số đã chuẩn hóa
+        payload.phone = phoneDigits;
         
         onSubmit(payload); 
         if (!isEditMode) { setUserData({ name: '', email: '', phone: '', password: '', role: 'Nhân viên' }); } 
@@ -40,8 +76,8 @@ const UserForm = ({ initialData, roles, onSubmit, onCancel }) => {
             <form onSubmit={handleSubmit} className="space-y-3">
                 <div><label className="text-sm font-medium text-gray-600">Họ và tên:</label><input name="name" value={userData.name} onChange={handleInputChange} required placeholder="Nhập họ và tên" className="w-full p-2 mt-1 border rounded-md" /></div>
                 <div><label className="text-sm font-medium text-gray-600">Email:</label><input name="email" value={userData.email} onChange={handleInputChange} required placeholder="Nhập email" type="email" className="w-full p-2 mt-1 border rounded-md" /></div>
-                <div><label className="text-sm font-medium text-gray-600">Số điện thoại:</label><input name="phone" value={userData.phone} onChange={handleInputChange} required placeholder="Nhập số điện thoại" type="tel" className="w-full p-2 mt-1 border rounded-md" /></div>
-                <div className="relative"><label className="text-sm font-medium text-gray-600">Mật khẩu:</label><input name="password" value={userData.password} onChange={handleInputChange} required={!isEditMode} placeholder={isEditMode ? "Để trống nếu không đổi" : "Nhập mật khẩu"} type={passwordVisible ? "text" : "password"} className="w-full p-2 mt-1 border rounded-md" /><button type="button" onClick={() => setPasswordVisible(!passwordVisible)} className="absolute right-3 top-9 text-gray-400 hover:text-gray-600">{passwordVisible ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}</button></div>
+                <div><label className="text-sm font-medium text-gray-600">Số điện thoại:</label><input name="phone" value={userData.phone} onChange={handleInputChange} required placeholder="Nhập số điện thoại" type="tel" inputMode="numeric" maxLength={10} pattern="[0-9]{10}" title="Số điện thoại phải gồm đúng 10 chữ số" className="w-full p-2 mt-1 border rounded-md" /></div>
+                <div className="relative"><label className="text-sm font-medium text-gray-600">Mật khẩu:</label><input name="password" value={userData.password} onChange={handleInputChange} required={!isEditMode} placeholder={isEditMode ? "Để trống nếu không đổi" : "Nhập mật khẩu (ít nhất 6 chữ số)"} type={passwordVisible ? "text" : "password"} inputMode="numeric" pattern="[0-9]{6,}" minLength={6} title="Mật khẩu phải gồm tối thiểu 6 chữ số" className="w-full p-2 mt-1 border rounded-md" /><button type="button" onClick={() => setPasswordVisible(!passwordVisible)} className="absolute right-3 top-9 text-gray-400 hover:text-gray-600">{passwordVisible ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}</button></div>
                 <div><label className="text-sm font-medium text-gray-600">Nhóm phân quyền:</label><select name="role" value={userData.role} onChange={handleInputChange} className="w-full p-2 mt-1 border rounded-md bg-white">{roles.map(role => <option key={role}>{role}</option>)}</select></div>
                 <div className="flex gap-2 pt-2"><button type="submit" className="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 transition">{isEditMode ? "Lưu thay đổi" : "Tạo tài khoản"}</button>{isEditMode && <button type="button" onClick={onCancel} className="w-full bg-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-lg hover:bg-gray-300">Hủy</button>}</div>
             </form>

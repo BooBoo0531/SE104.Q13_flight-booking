@@ -83,6 +83,12 @@ export default function DashboardScreen() {
             const allPermissions = res.data;
             setPermissions(allPermissions);
 
+            // DEBUG: Log để kiểm tra
+            console.log('🔍 Current User:', currentUser);
+            console.log('🔍 User Role:', currentUser.role);
+            console.log('🔍 All Permissions:', allPermissions);
+            console.log('🔍 Available Roles:', Object.keys(allPermissions));
+
             // 3. Lọc Tab dựa trên Role của User hiện tại
             const userPerms = allPermissions[currentUser.role];
             
@@ -101,6 +107,7 @@ export default function DashboardScreen() {
                     setActiveTab(tabsToShow[0]);
                 }
             } else {
+                console.error('❌ Không tìm thấy quyền cho role:', currentUser.role);
                 alert("Vai trò của bạn chưa được cấp quyền!");
             }
         } catch (error) {

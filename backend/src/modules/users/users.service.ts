@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
-import { RolePermission } from './entities/role-permission.entity';
+import { RolePermission } from './entities/role-permission.entity'; 
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -16,22 +16,37 @@ export class UsersService {
 
   // --- QUẢN LÝ USER ---
   async findAllUsers() {
-    return this.usersRepo.find({
+    const users = await this.usersRepo.find({
+      relations: ['role'], 
       select: {
         id: true,
         name: true,
         email: true,
         phone: true,
-        role: true,
+        role: {
+          role: true, 
+        },
       },
-      order: { id: 'DESC' } 
+      order: { id: 'DESC' },
     });
+    
+    // Transform role từ object sang string
+    return users.map(user => ({
+      ...user,
+      role: user.role?.role || 'Nhân viên'
+    }));
   }
 
   async createUser(data: any) {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(data.password, salt);
-    const newUser = this.usersRepo.create({ ...data, password: hashedPassword });
+
+    const userData = { ...data, password: hashedPassword };
+    if (data.role) {
+      userData.role = { role: data.role }; 
+    }
+
+    const newUser = this.usersRepo.create(userData);
     return this.usersRepo.save(newUser);
   }
 
@@ -41,7 +56,7 @@ export class UsersService {
       throw new NotFoundException('Không tìm thấy người dùng');
     }
 
-    // Xử lý mật khẩu: Nếu nhập mới thì hash, nếu để trống thì xóa khỏi data để không bị update nhầm thành chuỗi rỗng
+    // Xử lý mật khẩu
     if (data.password && data.password.trim() !== '') {
       const salt = await bcrypt.genSalt(10);
       data.password = await bcrypt.hash(data.password, salt);
@@ -49,21 +64,38 @@ export class UsersService {
       delete data.password;
     }
 
+    if (data.role) {
+      data.role = { role: data.role };
+    }
+
     await this.usersRepo.update(id, data);
 
-    // Trả về user sau khi update (để frontend cập nhật lại list nếu cần)
-    return this.usersRepo.findOneBy({ id });
+    const updatedUser = await this.usersRepo.findOne({
+      where: { id },
+      relations: ['role'], 
+    });
+    
+    if (!updatedUser) {
+      throw new NotFoundException('Không tìm thấy người dùng sau khi cập nhật');
+    }
+    
+    // Transform role từ object sang string
+    return {
+      ...updatedUser,
+      role: updatedUser.role?.role || 'Nhân viên'
+    };
   }
 
   async deleteUser(id: number) {
     return this.usersRepo.delete(id);
   }
 
-  // --- QUẢN LÝ QUYỀN ---
   async getAllPermissions() {
     const roles = await this.rolesRepo.find();
     const result = {};
-    roles.forEach(r => { result[r.role] = r.permissions; });
+    roles.forEach((r) => {
+      result[r.role] = r.permissions;
+    });
     return result;
   }
 
@@ -80,13 +112,53 @@ export class UsersService {
     const count = await this.rolesRepo.count();
     if (count === 0) {
       await this.rolesRepo.save([
-        { role: 'Quản trị hệ thống', permissions: { ChuyenBay: true, VeChuyenBay: true, BaoCao: true, MayBay: true, TaiKhoan: true, CaiDat: true } },
-        { role: 'Ban giám đốc', permissions: { ChuyenBay: false, VeChuyenBay: false, BaoCao: true, MayBay: false, TaiKhoan: false, CaiDat: true } },
-        { role: 'Điều hành bay', permissions: { ChuyenBay: true, VeChuyenBay: false, BaoCao: false, MayBay: true, TaiKhoan: false, CaiDat: false } },
-        { role: 'Nhân viên bán vé', permissions: { ChuyenBay: false, VeChuyenBay: true, BaoCao: false, MayBay: false, TaiKhoan: false, CaiDat: false } },
+        {
+          role: 'Quản trị',
+          permissions: {
+            ChuyenBay: true,
+            VeChuyenBay: true,
+            BaoCao: true,
+            MayBay: true,
+            TaiKhoan: true,
+            CaiDat: true,
+          },
+        },
+        {
+          role: 'Ban giám đốc',
+          permissions: {
+            ChuyenBay: false,
+            VeChuyenBay: false,
+            BaoCao: true,
+            MayBay: false,
+            TaiKhoan: false,
+            CaiDat: true,
+          },
+        },
+        {
+          role: 'Điều hành bay',
+          permissions: {
+            ChuyenBay: true,
+            VeChuyenBay: false,
+            BaoCao: false,
+            MayBay: true,
+            TaiKhoan: false,
+            CaiDat: false,
+          },
+        },
+        {
+          role: 'Nhân viên',
+          permissions: {
+            ChuyenBay: false,
+            VeChuyenBay: true,
+            BaoCao: false,
+            MayBay: false,
+            TaiKhoan: false,
+            CaiDat: false,
+          },
+        },
       ]);
-      return "Đã tạo dữ liệu mẫu!";
+      return 'Đã tạo dữ liệu mẫu!';
     }
-    return "Dữ liệu đã có sẵn.";
+    return 'Dữ liệu đã có sẵn.';
   }
 }

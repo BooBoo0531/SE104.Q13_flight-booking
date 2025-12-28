@@ -1,7 +1,15 @@
-import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  OneToMany,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Booking } from '../../bookings/entities/booking.entity';
+import { RolePermission } from '../../users/entities/role-permission.entity';
 
-@Entity({ name: 'NGUOIDUNG' }) 
+@Entity({ name: 'NGUOIDUNG' })
 export class User {
   @PrimaryGeneratedColumn({ name: 'MaNguoiDung' })
   id: number;
@@ -18,8 +26,9 @@ export class User {
   @Column({ name: 'SoDienThoai', nullable: true })
   phone: string;
 
-  @Column({ default: 'Nhân viên', name: 'VaiTro' }) 
-  role: string;
+  @ManyToOne(() => RolePermission, (rolePermission) => rolePermission.users)
+  @JoinColumn({ name: 'VaiTro' }) 
+  role: RolePermission;
 
   @Column({ type: 'varchar', name: 'ResetPasswordToken', nullable: true })
   resetPasswordToken?: string | null;

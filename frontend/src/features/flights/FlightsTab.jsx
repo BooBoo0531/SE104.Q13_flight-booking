@@ -239,7 +239,32 @@ const FlightForm = ({ initialData, onSubmit, onCancel, airports, airplanes, rule
     
     const handleSubmit = (e) => { 
         e.preventDefault(); 
-        if(parseInt(flightData.duration, 10) < rules.minFlightTime){ alert(`Thời gian bay tối thiểu là ${rules.minFlightTime} phút.`); return; }
+        
+        // Validate thời gian bay tối thiểu
+        if(parseInt(flightData.duration, 10) < rules.minFlightTime){ 
+            alert(`Vi phạm quy định: Thời gian bay tối thiểu là ${rules.minFlightTime} phút.`); 
+            return; 
+        }
+        
+        // Validate số lượng sân bay trung gian
+        if(intermediateAirports.length > rules.maxStopovers) {
+            alert(`Vi phạm quy định: Số sân bay trung gian tối đa là ${rules.maxStopovers}.`);
+            return;
+        }
+        
+        // Validate thời gian dừng tại mỗi sân bay trung gian
+        for(const airport of intermediateAirports) {
+            const duration = parseInt(airport.duration, 10);
+            if(duration < rules.minStopTime || duration > rules.maxStopTime) {
+                alert(`Vi phạm quy định: Thời gian dừng tại sân bay trung gian phải từ ${rules.minStopTime} đến ${rules.maxStopTime} phút.`);
+                return;
+            }
+            if(!airport.name) {
+                alert('Vui lòng chọn sân bay trung gian.');
+                return;
+            }
+        }
+        
         onSubmit({ ...flightData, intermediateAirports }); 
     };
 

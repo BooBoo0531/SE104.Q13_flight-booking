@@ -25,7 +25,7 @@ __decorate([
 ], IntermediateAirportDto.prototype, "airportId", void 0);
 __decorate([
     (0, class_validator_1.IsInt)(),
-    (0, class_validator_1.Min)(10, { message: 'Thời gian dừng phải lớn hơn hoặc bằng 10 phút' }),
+    (0, class_validator_1.Min)(1, { message: 'Thời gian dừng phải là số dương' }),
     __metadata("design:type", Number)
 ], IntermediateAirportDto.prototype, "duration", void 0);
 __decorate([

@@ -248,7 +248,7 @@ export default function DashboardScreen() {
       return `${departureTime}-${arrivalTime}`;
   };
 
-  const handleUpdateFlight = async (updatedFlight) => {
+  const handleUpdateFlight = async (updatedFlight, showAlert = true) => {
       try {
 
         const plane = airplanes.find(p => p.id === updatedFlight.planeId);
@@ -320,7 +320,9 @@ export default function DashboardScreen() {
           })) || []
         }));
         setFlights(formattedFlights);
-        alert('Cập nhật chuyến bay thành công!');
+        if (showAlert) {
+          alert('Cập nhật chuyến bay thành công!');
+        }
       } catch (err) {
         console.error('Lỗi cập nhật chuyến bay:', err);
         alert(err.response?.data?.message || 'Không thể cập nhật chuyến bay');
@@ -455,7 +457,7 @@ export default function DashboardScreen() {
         seatsTaken: flightToUpdate.seatsTaken + 1, 
         seatsEmpty: flightToUpdate.seatsEmpty - 1 
       };
-      handleUpdateFlight(updatedFlight);
+      handleUpdateFlight(updatedFlight, false); // Không hiện alert cập nhật chuyến bay
     }
     alert(`Tạo vé ${newTicket.ticketId} thành công!`);
     setFlightToBook(null);

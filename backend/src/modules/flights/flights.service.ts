@@ -57,7 +57,7 @@ export class FlightsService {
 
     if (duration < minFlightTime) {
       throw new BadRequestException(
-        'Lỗi: Thời gian hạ cánh phải sau thời gian cất cánh!',
+        `Vi phạm quy định: Thời gian bay tối thiểu là ${minFlightTime} phút. Thời gian bay hiện tại: ${Math.floor(duration)} phút.`,
       );
     }
 
@@ -118,7 +118,7 @@ export class FlightsService {
     });
   }
 
-  async update(id: number, dto: CreateFlightDto) {
+  async update(id: number, dto: UpdateFlightDto) {
     const input = dto as any;
   
     const flight = await this.flightRepo.findOne({ where: { id } });

@@ -1,7 +1,7 @@
-import { IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsEmail, IsNumber, IsOptional, IsString, Matches, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class UpdateTicketDto {
-  // Không cho đổi chuyến bay từ UI (select bị disabled), nhưng để optional
   @IsOptional()
   @IsString()
   flightId?: string;
@@ -15,6 +15,7 @@ export class UpdateTicketDto {
   seatClass?: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   price?: number;
@@ -25,13 +26,16 @@ export class UpdateTicketDto {
 
   @IsOptional()
   @IsString()
+  @Matches(/^\d{9}(\d{3})?$/, { message: 'CMND/CCCD phải là 9 số hoặc 12 số' })
   idCard?: string;
 
   @IsOptional()
   @IsString()
+  @Matches(/^\d{10}$/, { message: 'Số điện thoại phải đúng 10 số' })
   phone?: string;
 
   @IsOptional()
   @IsString()
+  @IsEmail({}, { message: 'Email không hợp lệ' })
   email?: string;
 }

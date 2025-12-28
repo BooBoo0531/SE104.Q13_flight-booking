@@ -5,15 +5,12 @@ export class CreateTicketClassDto {
   @IsNotEmpty()
   name: string;
 
-  // UI dùng percentage (vd: 105)
   @IsOptional()
-  @IsNumber()
-  @Min(0)
+  @IsNumber()g
+  @Min(0.000001)
   percentage?: number;
-
-  // Nếu muốn gửi trực tiếp ratio (vd: 1.05) cũng được
   @IsOptional()
   @IsNumber()
-  @Min(0)
+  @Min(0.000001)
   priceRatio?: number;
 }

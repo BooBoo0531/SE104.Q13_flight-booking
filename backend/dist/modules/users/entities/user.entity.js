@@ -19,6 +19,8 @@ let User = class User {
     password;
     phone;
     role;
+    resetPasswordToken;
+    resetPasswordExpires;
     bookings;
 };
 exports.User = User;
@@ -46,6 +48,14 @@ __decorate([
     (0, typeorm_1.Column)({ default: 'Nhân viên', name: 'VaiTro' }),
     __metadata("design:type", String)
 ], User.prototype, "role", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', name: 'ResetPasswordToken', nullable: true }),
+    __metadata("design:type", Object)
+], User.prototype, "resetPasswordToken", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'timestamp', name: 'ResetPasswordExpires', nullable: true }),
+    __metadata("design:type", Object)
+], User.prototype, "resetPasswordExpires", void 0);
 __decorate([
     (0, typeorm_1.OneToMany)(() => booking_entity_1.Booking, (booking) => booking.user),
     __metadata("design:type", Array)

@@ -21,6 +21,12 @@ export class User {
   @Column({ default: 'Nhân viên', name: 'VaiTro' }) 
   role: string;
 
+  @Column({ type: 'varchar', name: 'ResetPasswordToken', nullable: true })
+  resetPasswordToken?: string | null;
+
+  @Column({ type: 'timestamp', name: 'ResetPasswordExpires', nullable: true })
+  resetPasswordExpires?: Date | null;
+
   // Một người có nhiều phiếu đặt chỗ
   @OneToMany(() => Booking, (booking) => booking.user)
   bookings: Booking[];

@@ -36,24 +36,30 @@ let FlightsController = class FlightsController {
     create(dto) {
         return this.svc.create(dto);
     }
+    update(id, dto) {
+        return this.svc.update(Number(id), dto);
+    }
+    remove(id) {
+        return this.svc.remove(Number(id));
+    }
 };
 exports.FlightsController = FlightsController;
 __decorate([
-    (0, roles_decorator_1.Roles)('admin', 'staff', 'user'),
+    (0, roles_decorator_1.Roles)('Quản trị', 'Điều hành bay', 'Nhân viên'),
     (0, common_1.Get)(),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], FlightsController.prototype, "list", null);
 __decorate([
-    (0, roles_decorator_1.Roles)('admin', 'manager'),
+    (0, roles_decorator_1.Roles)('Quản trị', 'Điều hành bay'),
     (0, common_1.Get)('admin-only'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], FlightsController.prototype, "adminRoute", null);
 __decorate([
-    (0, roles_decorator_1.Roles)('admin', 'staff', 'user'),
+    (0, roles_decorator_1.Roles)('Quản trị', 'Điều hành bay', 'Nhân viên'),
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
@@ -61,13 +67,30 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], FlightsController.prototype, "get", null);
 __decorate([
-    (0, roles_decorator_1.Roles)('admin', 'manager'),
+    (0, roles_decorator_1.Roles)('Quản trị', 'Điều hành bay'),
     (0, common_1.Post)(),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [create_flight_dto_1.CreateFlightDto]),
     __metadata("design:returntype", void 0)
 ], FlightsController.prototype, "create", null);
+__decorate([
+    (0, roles_decorator_1.Roles)('Quản trị', 'Điều hành bay'),
+    (0, common_1.Patch)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, create_flight_dto_1.CreateFlightDto]),
+    __metadata("design:returntype", void 0)
+], FlightsController.prototype, "update", null);
+__decorate([
+    (0, roles_decorator_1.Roles)('Quản trị', 'Điều hành bay'),
+    (0, common_1.Delete)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], FlightsController.prototype, "remove", null);
 exports.FlightsController = FlightsController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, common_1.Controller)('flights'),

@@ -47,6 +47,7 @@ const setting_entity_1 = require("../modules/settings/entities/setting.entity");
 const intermediate_airport_entity_1 = require("../modules/intermediate-airports/entities/intermediate-airport.entity");
 const seat_entity_1 = require("../modules/seats/entities/seat.entity");
 const flight_ticket_class_entity_1 = require("../modules/flight-ticket-classes/entities/flight-ticket-class.entity");
+const role_permission_entity_1 = require("../modules/users/entities/role-permission.entity");
 dotenv.config();
 exports.AppDataSource = new typeorm_1.DataSource({
     type: 'postgres',
@@ -74,7 +75,8 @@ exports.AppDataSource = new typeorm_1.DataSource({
         setting_entity_1.Setting,
         intermediate_airport_entity_1.IntermediateAirport,
         seat_entity_1.Seat,
-        flight_ticket_class_entity_1.FlightTicketClass
+        flight_ticket_class_entity_1.FlightTicketClass,
+        role_permission_entity_1.RolePermission
     ],
     migrations: [],
     subscribers: [],

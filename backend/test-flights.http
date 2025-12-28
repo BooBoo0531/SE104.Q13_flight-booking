@@ -1,0 +1,45 @@
+### Login Admin
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@flight.com",
+  "password": "flight123456"
+}
+
+### Get All Flights (Thay YOUR_TOKEN bằng access_token từ request trên)
+GET http://localhost:3000/flights
+Authorization: Bearer YOUR_TOKEN
+
+### Get Flight Detail
+GET http://localhost:3000/flights/1
+Authorization: Bearer YOUR_TOKEN
+
+### Create New Flight
+POST http://localhost:3000/flights
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "flightCode": "VN102",
+  "startTime": "2025-12-29T10:00:00",
+  "endTime": "2025-12-29T12:30:00",
+  "price": 2000000,
+  "totalSeats": 250,
+  "planeId": 1,
+  "fromAirportId": 2,
+  "toAirportId": 1
+}
+
+### Update Flight
+PATCH http://localhost:3000/flights/1
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "price": 1800000
+}
+
+### Delete Flight
+DELETE http://localhost:3000/flights/1
+Authorization: Bearer YOUR_TOKEN

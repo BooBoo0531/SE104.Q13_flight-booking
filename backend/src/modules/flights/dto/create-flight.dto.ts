@@ -1,10 +1,26 @@
-import { IsString, IsNotEmpty, IsInt, IsDateString, IsNumber, Min } from 'class-validator';
+import { IsString, IsNotEmpty, IsInt, IsDateString, IsNumber, Min, IsArray, IsOptional, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+
+// DTO cho sân bay trung gian
+export class IntermediateAirportDto {
+  @IsInt()
+  @IsNotEmpty()
+  airportId: number;
+
+  @IsInt()
+  @Min(10, { message: 'Thời gian dừng phải lớn hơn hoặc bằng 10 phút' })
+  duration: number; 
+
+  @IsString()
+  @IsOptional()
+  note?: string;
+}
 
 export class CreateFlightDto {
   // 1. Thông tin cơ bản
   @IsString()
   @IsNotEmpty()
-  flightCode: string; // Đổi từ flightNumber thành flightCode cho khớp Entity
+  flightCode: string; 
 
   @IsNumber()
   @Min(0)
@@ -14,17 +30,14 @@ export class CreateFlightDto {
   @Min(1)
   totalSeats: number;
 
-  // 2. Thời gian (Quan trọng để fix lỗi bạn vừa gặp)
   @IsDateString()
   @IsNotEmpty()
-  startTime: string; // Dùng string dạng ISO (YYYY-MM-DDTHH:mm:ss)
+  startTime: string; 
 
   @IsDateString()
   @IsNotEmpty()
   endTime: string;
 
-  // 3. Các ID quan hệ (Thay vì gửi string tên thành phố, ta gửi ID)
-  
   @IsInt()
   @IsNotEmpty()
   planeId: number; // ID máy bay
@@ -36,4 +49,11 @@ export class CreateFlightDto {
   @IsInt()
   @IsNotEmpty()
   toAirportId: number; // ID sân bay đến
+
+  // 4. Sân bay trung gian 
+  @IsArray()
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => IntermediateAirportDto)
+  intermediateAirports?: IntermediateAirportDto[];
 }

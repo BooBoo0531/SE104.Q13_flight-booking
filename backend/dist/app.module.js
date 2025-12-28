@@ -45,6 +45,7 @@ const typeorm_1 = require("@nestjs/typeorm");
 const flights_module_1 = require("./modules/flights/flights.module");
 const auth_module_1 = require("./auth/auth.module");
 const airplanes_module_1 = require("./modules/airplanes/airplanes.module");
+const airports_module_1 = require("./modules/airports/airports.module");
 const users_module_1 = require("./modules/users/users.module");
 const reports_module_1 = require("./modules/reports/reports.module");
 const dotenv = __importStar(require("dotenv"));
@@ -71,6 +72,7 @@ exports.AppModule = AppModule = __decorate([
             flights_module_1.FlightsModule,
             auth_module_1.AuthModule,
             airplanes_module_1.AirplanesModule,
+            airports_module_1.AirportsModule,
             users_module_1.UsersModule,
             reports_module_1.ReportsModule,
         ],

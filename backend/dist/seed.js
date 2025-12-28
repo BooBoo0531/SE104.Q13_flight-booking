@@ -45,6 +45,7 @@ const setting_entity_1 = require("./modules/settings/entities/setting.entity");
 const seat_entity_1 = require("./modules/seats/entities/seat.entity");
 const intermediate_airport_entity_1 = require("./modules/intermediate-airports/entities/intermediate-airport.entity");
 const flight_ticket_class_entity_1 = require("./modules/flight-ticket-classes/entities/flight-ticket-class.entity");
+const role_permission_entity_1 = require("./modules/users/entities/role-permission.entity");
 const bcrypt = __importStar(require("bcryptjs"));
 const hoVN = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Huỳnh', 'Hoàng', 'Phan', 'Vũ', 'Võ', 'Đặng', 'Bùi', 'Đỗ', 'Hồ', 'Ngô', 'Dương', 'Lý'];
 const demVN = ['Văn', 'Thị', 'Minh', 'Thanh', 'Ngọc', 'Quốc', 'Tuấn', 'Hải', 'Đức', 'Xuân', 'Thu', 'Phương', 'Hữu', 'Gia', 'Khánh'];
@@ -70,9 +71,21 @@ const hashPassword = async (plain) => {
 };
 async function bootstrap() {
     console.log('🚀 Bắt đầu seed database...');
+    const readline = require('readline').createInterface({ input: process.stdin, output: process.stdout });
+    const shouldClear = await new Promise(resolve => {
+        readline.question('⚠️  XÓA TẤT CẢ DỮ LIỆU? (yes/no): ', (answer) => {
+            readline.close();
+            resolve(answer.toLowerCase() === 'yes');
+        });
+    });
+    if (!shouldClear) {
+        console.log('❌ Hủy seed - Dữ liệu được giữ nguyên');
+        return;
+    }
     try {
         if (!data_source_1.AppDataSource.isInitialized)
             await data_source_1.AppDataSource.initialize();
+        console.log('🗑️  Xóa dữ liệu cũ...');
         const queryRunner = data_source_1.AppDataSource.createQueryRunner();
         const tables = [
             'VE', 'PHIEUDATCHO', 'CT_HANGVE', 'TRUNGGIAN',
@@ -93,11 +106,17 @@ async function bootstrap() {
         const seatRepo = data_source_1.AppDataSource.getRepository(seat_entity_1.Seat);
         const interRepo = data_source_1.AppDataSource.getRepository(intermediate_airport_entity_1.IntermediateAirport);
         const flightDetailRepo = data_source_1.AppDataSource.getRepository(flight_ticket_class_entity_1.FlightTicketClass);
+        const rolePermRepo = data_source_1.AppDataSource.getRepository(role_permission_entity_1.RolePermission);
         await settingRepo.save({
             minFlightTime: 30, maxIntermediateAirports: 2, minStopoverTime: 10, maxStopoverTime: 20, latestBookingTime: 12, latestCancellationTime: 24
         });
         const ecoClass = await classRepo.save({ name: 'Phổ thông', priceRatio: 1.0 });
         const bizClass = await classRepo.save({ name: 'Thương gia', priceRatio: 1.5 });
+        await rolePermRepo.save([
+            { role: 'admin', permissions: { ChuyenBay: true, VeChuyenBay: true, BaoCao: true, MayBay: true, TaiKhoan: true, CaiDat: true } },
+            { role: 'manager', permissions: { ChuyenBay: true, VeChuyenBay: false, BaoCao: true, MayBay: true, TaiKhoan: false, CaiDat: false } },
+            { role: 'staff', permissions: { ChuyenBay: false, VeChuyenBay: true, BaoCao: false, MayBay: false, TaiKhoan: false, CaiDat: false } },
+        ]);
         console.log('👥 Tạo Users...');
         const defaultPassword = await hashPassword('flight123456');
         await userRepo.save({
@@ -117,7 +136,7 @@ async function bootstrap() {
             });
         }
         const customers = [];
-        for (let i = 0; i < 50; i++) {
+        for (let i = 0; i < 30; i++) {
             const name = generateName();
             const user = await userRepo.save({
                 name,
@@ -148,7 +167,7 @@ async function bootstrap() {
             { name: 'Airbus A350', seats: 250, bizRows: 5, seatsPerRow: 9 },
         ];
         const planes = [];
-        for (let i = 1; i <= 15; i++) {
+        for (let i = 1; i <= 5; i++) {
             const type = getRandomItem(planesData);
             const totalRows = Math.ceil(type.seats / type.seatsPerRow);
             const bizSeatsCount = type.bizRows * type.seatsPerRow;
@@ -180,7 +199,9 @@ async function bootstrap() {
         console.log('🚀 Tạo Chuyến bay & Bán vé...');
         const usedFlightCodes = new Set();
         let globalBookingCounter = 0;
-        for (let i = 1; i <= 80; i++) {
+        for (let i = 1; i <= 15; i++) {
+            if (i % 5 === 0)
+                console.log(`   ⏳ Đang tạo chuyến bay ${i}/15...`);
             let from = getRandomItem(airports);
             let to = getRandomItem(airports);
             while (from.code === to.code)
@@ -291,10 +312,13 @@ async function bootstrap() {
                     });
                 }
                 if (bookingsBatch.length > 0) {
-                    for (const bookingData of bookingsBatch) {
-                        const tickets = bookingData.tickets;
-                        delete bookingData.tickets;
-                        const savedBooking = await bookingRepo.save(bookingData);
+                    const savedBookings = await bookingRepo.save(bookingsBatch.map(b => {
+                        const { tickets, ...bookingData } = b;
+                        return bookingData;
+                    }));
+                    for (let idx = 0; idx < bookingsBatch.length; idx++) {
+                        const tickets = bookingsBatch[idx].tickets;
+                        const savedBooking = savedBookings[idx];
                         const ticketsToInsert = tickets.map((t) => ({
                             ticketId: t.ticketId,
                             seat: t.seat,
@@ -307,7 +331,7 @@ async function bootstrap() {
                         ticketsBatch.push(...ticketsToInsert);
                     }
                     if (ticketsBatch.length > 0) {
-                        const chunkSize = 100;
+                        const chunkSize = 500;
                         for (let k = 0; k < ticketsBatch.length; k += chunkSize) {
                             await ticketRepo.save(ticketsBatch.slice(k, k + chunkSize));
                         }

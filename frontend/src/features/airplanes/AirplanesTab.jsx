@@ -92,7 +92,7 @@ const AirplanesList = ({ airplanes, onEdit, onCreate, onDelete, canManage }) => 
                                     <td className="p-4">
                                         <div className="flex justify-center items-center space-x-2">
                                             <button onClick={() => onEdit(plane)} className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-100 rounded-full transition"><EditIcon className="w-4 h-4"/></button>
-                                            <button onClick={() => onDelete(plane.id)} className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-100 rounded-full transition"><TrashIcon className="w-4 h-4"/></button>
+                                            <button onClick={() => onDelete(plane.backendId)} className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-100 rounded-full transition"><TrashIcon className="w-4 h-4"/></button>
                                         </div>
                                     </td>
                                 )}
@@ -107,33 +107,21 @@ const AirplanesList = ({ airplanes, onEdit, onCreate, onDelete, canManage }) => 
     );
 };
 
-const AirplanesTab = () => { 
-    const [airplanes, setAirplanes] = useState([]);
+const AirplanesTab = ({ airplanes: propAirplanes, onUpdateAirplanes }) => { 
+    const [airplanes, setAirplanes] = useState(propAirplanes || []);
     const [subTab, setSubTab] = useState('list');
     const [editingAirplane, setEditingAirplane] = useState(null);
     const [airplaneToDelete, setAirplaneToDelete] = useState(null);
-    const [loading, setLoading] = useState(false);
 
     // 👇 LOGIC PHÂN QUYỀN
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     // Admin và Điều hành bay được quản lý. Ban giám đốc chỉ xem.
     const canManage = ['Quản trị', 'Điều hành bay'].includes(user.role);
 
-    const fetchAirplanes = async () => {
-        setLoading(true);
-        try {
-            const res = await axios.get(API_URL);
-            setAirplanes(Array.isArray(res.data) ? res.data : []);
-        } catch (error) {
-            console.error("Lỗi lấy dữ liệu:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    // Sync props to local state when props change
     useEffect(() => {
-        fetchAirplanes();
-    }, []);
+        setAirplanes(propAirplanes || []);
+    }, [propAirplanes]);
 
     const handleSave = async (planeData) => {
         try {
@@ -145,13 +133,35 @@ const AirplanesTab = () => {
             };
 
             if (editingAirplane) {
-                await axios.patch(`${API_URL}/${editingAirplane.id}`, payload);
+                const res = await axios.patch(`${API_URL}/${editingAirplane.backendId}`, payload);
+                const updatedAirplanes = airplanes.map(a => a.backendId === editingAirplane.backendId ? {
+                    id: res.data.code,
+                    backendId: res.data.id,
+                    name: res.data.name,
+                    code: res.data.code,
+                    totalSeats: res.data.totalSeats,
+                    businessSeats: res.data.businessSeats,
+                    economySeats: res.data.economySeats
+                } : a);
+                setAirplanes(updatedAirplanes);
+                onUpdateAirplanes(updatedAirplanes);
                 alert("Cập nhật máy bay thành công!");
             } else {
-                await axios.post(API_URL, payload);
+                const res = await axios.post(API_URL, payload);
+                const newPlane = {
+                    id: res.data.code,
+                    backendId: res.data.id,
+                    name: res.data.name,
+                    code: res.data.code,
+                    totalSeats: res.data.totalSeats,
+                    businessSeats: res.data.businessSeats,
+                    economySeats: res.data.economySeats
+                };
+                const updatedAirplanes = [...airplanes, newPlane];
+                setAirplanes(updatedAirplanes);
+                onUpdateAirplanes(updatedAirplanes);
                 alert("Thêm máy bay thành công!");
             }
-            fetchAirplanes(); 
             setSubTab('list');
             setEditingAirplane(null);
         } catch (error) {
@@ -159,12 +169,14 @@ const AirplanesTab = () => {
         }
     };
 
-    const handleDeleteClick = (planeId) => { setAirplaneToDelete(planeId); }
+    const handleDeleteClick = (planeBackendId) => { setAirplaneToDelete(planeBackendId); }
     
     const confirmDelete = async () => {
         try {
             await axios.delete(`${API_URL}/${airplaneToDelete}`);
-            fetchAirplanes(); 
+            const updatedAirplanes = airplanes.filter(a => a.backendId !== airplaneToDelete);
+            setAirplanes(updatedAirplanes);
+            onUpdateAirplanes(updatedAirplanes);
         } catch (error) {
             alert("Máy bay này không thể xóa vì đang có chuyến bay sử dụng.");
         } finally {
@@ -180,7 +192,6 @@ const AirplanesTab = () => {
     const SubTabButton = ({ value, children }) => ( <button onClick={() => { setSubTab(value); setEditingAirplane(null); }} className={`px-6 py-2 rounded-full text-sm font-semibold ${subTab === value && !editingAirplane ? 'bg-blue-600 text-white shadow' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>{children}</button> );
 
     const renderContent = () => {
-        if (loading && subTab === 'list') return <div className="p-10 text-center">Đang tải dữ liệu...</div>;
         switch(subTab) {
             // 👇 Truyền canManage xuống List
             case 'list': return <AirplanesList airplanes={airplanes} onCreate={handleCreateClick} onEdit={handleEditClick} onDelete={handleDeleteClick} canManage={canManage}/>;

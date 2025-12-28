@@ -86,9 +86,9 @@ const UserForm = ({ initialData, roles, onSubmit, onCancel }) => {
 }
 
 // --- 2. MAIN COMPONENT (Logic API + Giao diện cũ) ---
-const UsersTab = () => {
-    const [users, setUsers] = useState([]);
-    const [localPermissions, setLocalPermissions] = useState({});
+const UsersTab = ({ users: propUsers, permissions: propPermissions, onUpdateUsers, onUpdatePermissions }) => {
+    const [users, setUsers] = useState(propUsers || []);
+    const [localPermissions, setLocalPermissions] = useState(propPermissions || {});
     
     const [userToDelete, setUserToDelete] = useState(null);
     const [editingUser, setEditingUser] = useState(null);
@@ -101,27 +101,14 @@ const UsersTab = () => {
     const DEFAULT_ROLES = ['Quản trị', 'Ban giám đốc', 'Điều hành bay', 'Nhân viên'];
     const DEFAULT_MODULES = { 'ChuyenBay': false, 'VeChuyenBay': false, 'BaoCao': false, 'MayBay': false, 'TaiKhoan': false, 'CaiDat': false };
 
-    const fetchData = async () => {
-        try {
-            const [usersRes, permsRes] = await Promise.all([
-                axios.get(API_URL),
-                axios.get(`${API_URL}/permissions`)
-            ]);
+    // Sync props to local state when props change
+    useEffect(() => {
+        setUsers(propUsers || []);
+    }, [propUsers]);
 
-            setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
-
-            let permsData = permsRes.data || {};
-            if (Object.keys(permsData).length === 0) {
-                DEFAULT_ROLES.forEach(role => { permsData[role] = { ...DEFAULT_MODULES }; });
-            }
-            setLocalPermissions(permsData);
-
-        } catch (error) {
-            console.error("Lỗi tải dữ liệu:", error);
-        }
-    };
-
-    useEffect(() => { fetchData(); }, []);
+    useEffect(() => {
+        setLocalPermissions(propPermissions || {});
+    }, [propPermissions]);
 
     const handlePermissionChange = (role, permission, value) => { 
         if (!canManage) return; // Chặn nếu không có quyền
@@ -135,6 +122,7 @@ const UsersTab = () => {
         if (!canManage) return; 
         try {
             await axios.post(`${API_URL}/permissions`, localPermissions);
+            onUpdatePermissions(localPermissions);
             setSaveButtonText("Đã lưu!"); 
             setTimeout(() => setSaveButtonText("Lưu"), 2000); 
         } catch (error) {
@@ -144,9 +132,11 @@ const UsersTab = () => {
 
     const handleCreateUser = async (newUser) => { 
         try {
-            await axios.post(API_URL, newUser);
+            const res = await axios.post(API_URL, newUser);
+            const updatedUsers = [...users, res.data];
+            setUsers(updatedUsers);
+            onUpdateUsers(updatedUsers);
             alert("Tạo tài khoản thành công!");
-            fetchData(); 
         } catch (error) {
             alert("Lỗi tạo user: " + (error.response?.data?.message || error.message));
         }
@@ -155,10 +145,12 @@ const UsersTab = () => {
     const handleUpdateUser = async (updatedUser) => {
         try {
             const { createdAt, id, ...payload } = updatedUser; 
-            await axios.patch(`${API_URL}/${id}`, payload);
+            const res = await axios.patch(`${API_URL}/${id}`, payload);
+            const updatedUsers = users.map(u => u.id === id ? res.data : u);
+            setUsers(updatedUsers);
+            onUpdateUsers(updatedUsers);
             alert("Cập nhật thông tin thành công!");
             setEditingUser(null);
-            fetchData();
         } catch (error) {
             console.error(error);
             alert("Lỗi cập nhật: " + (error.response?.data?.message || error.message));
@@ -170,7 +162,9 @@ const UsersTab = () => {
     const confirmDelete = async () => { 
         try {
             await axios.delete(`${API_URL}/${userToDelete}`);
-            fetchData();
+            const updatedUsers = users.filter(u => u.id !== userToDelete);
+            setUsers(updatedUsers);
+            onUpdateUsers(updatedUsers);
         } catch (error) {
             alert("Lỗi xóa: " + error.message);
         } finally {

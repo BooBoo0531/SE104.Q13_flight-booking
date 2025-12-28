@@ -128,16 +128,24 @@ export default function DashboardScreen() {
       try {
         setLoading(true);
 
-        // Load flights, airports, airplanes, settings, ticket-classes song song từ API
+        // Load flights, airports, airplanes, settings, ticket-classes, users song song từ API
         const [flightsData, airportsData, airplanesData, settingsData, ticketClassesData] =
           await Promise.all([getFlights(), getAirports(), getAirplanes(), getSettings(), getTicketClasses()]);
 
-        // Tickets có phân quyền -> nếu không đủ quyền / hết token thì để rỗng
+        // Tickets và Users có phân quyền -> nếu không đủ quyền / hết token thì để rỗng
         let ticketsData = [];
         try {
           ticketsData = await getTickets();
         } catch (e) {
           ticketsData = [];
+        }
+
+        let usersData = [];
+        try {
+          const res = await axios.get("http://localhost:3000/users");
+          usersData = Array.isArray(res.data) ? res.data : [];
+        } catch (e) {
+          usersData = [];
         }
 
         // Format flights data từ backend sang frontend format
@@ -212,6 +220,7 @@ export default function DashboardScreen() {
               ]
         );
         setTickets(ticketsData);
+        setUsers(usersData);
         setError(null);
       } catch (err) {
         console.error("Lỗi tải dữ liệu:", err);
@@ -655,17 +664,15 @@ export default function DashboardScreen() {
         return <ReportsTab />;
       case "Máy bay":
         return (
-          <AirplanesTab airplanes={airplanes} onCreate={handleCreateAirplane} onEdit={handleUpdateAirplane} onDelete={handleDeleteAirplane} />
+          <AirplanesTab airplanes={airplanes} onUpdateAirplanes={setAirplanes} />
         );
       case "Tài khoản và quyền":
         return (
           <UsersTab
             users={users}
             permissions={permissions}
-            onSavePermissions={setPermissions}
-            onCreateUser={handleCreateUser}
-            onUpdateUser={handleUpdateUser}
-            onDeleteUser={handleDeleteUser}
+            onUpdateUsers={setUsers}
+            onUpdatePermissions={setPermissions}
           />
         );
       case "Cài đặt":

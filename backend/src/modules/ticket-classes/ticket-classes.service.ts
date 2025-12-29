@@ -8,6 +8,7 @@ import { FlightTicketClass } from '../flight-ticket-classes/entities/flight-tick
 import { Seat } from '../seats/entities/seat.entity';
 import { Flight } from '../flights/entities/flight.entity';
 import { Airplane } from '../airplanes/entities/airplane.entity';
+import { Ticket } from '../tickets/entities/ticket.entity';
 
 @Injectable()
 export class TicketClassesService {
@@ -22,6 +23,8 @@ export class TicketClassesService {
     private readonly flightRepo: Repository<Flight>,
     @InjectRepository(Airplane)
     private readonly airplaneRepo: Repository<Airplane>,
+    @InjectRepository(Ticket)
+    private readonly ticketRepo: Repository<Ticket>,
   ) {}
 
   private toUI(entity: TicketClass) {
@@ -100,7 +103,41 @@ export class TicketClassesService {
       );
     }
 
-    // 3. Kiểm tra có FlightTicketClass nào với chuyến bay đang hoạt động không
+    // 3. Kiểm tra có vé nào trong chuyến bay đang hoạt động sử dụng hạng vé này không
+    const activeTicketsCount = await this.ticketRepo
+      .createQueryBuilder('ticket')
+      .innerJoin('ticket.flight', 'flight')
+      .where('ticket.seatClass = :className', { className: row.name })
+      .andWhere('flight.status NOT IN (:...statuses)', { 
+        statuses: ['completed', 'cancelled'] 
+      })
+      .getCount();
+
+    console.log(`[DEBUG] Found ${activeTicketsCount} tickets with seatClass="${row.name}" in active flights`);
+
+    if (activeTicketsCount > 0) {
+      // Lấy danh sách mã chuyến bay để hiển thị trong message
+      const activeFlightsWithTickets = await this.ticketRepo
+        .createQueryBuilder('ticket')
+        .innerJoin('ticket.flight', 'flight')
+        .select('DISTINCT flight.flightCode', 'flightCode')
+        .where('ticket.seatClass = :className', { className: row.name })
+        .andWhere('flight.status NOT IN (:...statuses)', { 
+          statuses: ['completed', 'cancelled'] 
+        })
+        .limit(5)
+        .getRawMany();
+
+      const flightCodes = activeFlightsWithTickets.map(f => f.flightCode).join(', ');
+      const moreText = activeFlightsWithTickets.length >= 5 ? ', ...' : '';
+      
+      throw new BadRequestException(
+        `Không thể xóa hạng vé "${row.name}" vì đang có ${activeTicketsCount} vé đã được mua trong các chuyến bay đang hoạt động (${flightCodes}${moreText}). ` +
+        `Chỉ có thể xóa khi tất cả các chuyến bay sử dụng hạng vé này có trạng thái 'Hoàn thành' hoặc 'Đã hủy'.`
+      );
+    }
+
+    // 4. Kiểm tra có FlightTicketClass nào với chuyến bay đang hoạt động không
     const flightTicketClasses = await this.flightTicketClassRepo.find({
       relations: ['flight', 'ticketClass'],
       where: { ticketClass: { id } }
@@ -132,12 +169,12 @@ export class TicketClassesService {
       }
     }
 
-    // 4. Xóa tất cả FlightTicketClass liên quan (cho các chuyến bay đã hoàn thành/hủy)
+    // 5. Xóa tất cả FlightTicketClass liên quan (cho các chuyến bay đã hoàn thành/hủy)
     if (flightTicketClasses.length > 0) {
       await this.flightTicketClassRepo.remove(flightTicketClasses);
     }
 
-    // 5. Xóa hạng vé
+    // 6. Xóa hạng vé
     await this.repo.remove(row);
     return { message: 'Xóa hạng vé thành công' };
   }

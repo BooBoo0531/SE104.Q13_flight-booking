@@ -6,13 +6,15 @@ import { FlightTicketClass } from '../flight-ticket-classes/entities/flight-tick
 import { Seat } from '../seats/entities/seat.entity';
 import { Flight } from '../flights/entities/flight.entity';
 import { Airplane } from '../airplanes/entities/airplane.entity';
+import { Ticket } from '../tickets/entities/ticket.entity';
 export declare class TicketClassesService {
     private readonly repo;
     private readonly flightTicketClassRepo;
     private readonly seatRepo;
     private readonly flightRepo;
     private readonly airplaneRepo;
-    constructor(repo: Repository<TicketClass>, flightTicketClassRepo: Repository<FlightTicketClass>, seatRepo: Repository<Seat>, flightRepo: Repository<Flight>, airplaneRepo: Repository<Airplane>);
+    private readonly ticketRepo;
+    constructor(repo: Repository<TicketClass>, flightTicketClassRepo: Repository<FlightTicketClass>, seatRepo: Repository<Seat>, flightRepo: Repository<Flight>, airplaneRepo: Repository<Airplane>, ticketRepo: Repository<Ticket>);
     private toUI;
     private normalizeRatio;
     findAll(): Promise<{

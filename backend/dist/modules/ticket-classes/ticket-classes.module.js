@@ -16,12 +16,13 @@ const flight_ticket_class_entity_1 = require("../flight-ticket-classes/entities/
 const seat_entity_1 = require("../seats/entities/seat.entity");
 const flight_entity_1 = require("../flights/entities/flight.entity");
 const airplane_entity_1 = require("../airplanes/entities/airplane.entity");
+const ticket_entity_1 = require("../tickets/entities/ticket.entity");
 let TicketClassesModule = class TicketClassesModule {
 };
 exports.TicketClassesModule = TicketClassesModule;
 exports.TicketClassesModule = TicketClassesModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([ticket_class_entity_1.TicketClass, flight_ticket_class_entity_1.FlightTicketClass, seat_entity_1.Seat, flight_entity_1.Flight, airplane_entity_1.Airplane])],
+        imports: [typeorm_1.TypeOrmModule.forFeature([ticket_class_entity_1.TicketClass, flight_ticket_class_entity_1.FlightTicketClass, seat_entity_1.Seat, flight_entity_1.Flight, airplane_entity_1.Airplane, ticket_entity_1.Ticket])],
         controllers: [ticket_classes_controller_1.TicketClassesController],
         providers: [ticket_classes_service_1.TicketClassesService],
         exports: [ticket_classes_service_1.TicketClassesService],

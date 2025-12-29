@@ -7,9 +7,10 @@ import { FlightTicketClass } from '../flight-ticket-classes/entities/flight-tick
 import { Seat } from '../seats/entities/seat.entity';
 import { Flight } from '../flights/entities/flight.entity';
 import { Airplane } from '../airplanes/entities/airplane.entity';
+import { Ticket } from '../tickets/entities/ticket.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([TicketClass, FlightTicketClass, Seat, Flight, Airplane])],
+  imports: [TypeOrmModule.forFeature([TicketClass, FlightTicketClass, Seat, Flight, Airplane, Ticket])],
   controllers: [TicketClassesController],
   providers: [TicketClassesService],
   exports: [TicketClassesService],

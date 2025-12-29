@@ -17,10 +17,22 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const ticket_class_entity_1 = require("./entities/ticket-class.entity");
+const flight_ticket_class_entity_1 = require("../flight-ticket-classes/entities/flight-ticket-class.entity");
+const seat_entity_1 = require("../seats/entities/seat.entity");
+const flight_entity_1 = require("../flights/entities/flight.entity");
+const airplane_entity_1 = require("../airplanes/entities/airplane.entity");
 let TicketClassesService = class TicketClassesService {
     repo;
-    constructor(repo) {
+    flightTicketClassRepo;
+    seatRepo;
+    flightRepo;
+    airplaneRepo;
+    constructor(repo, flightTicketClassRepo, seatRepo, flightRepo, airplaneRepo) {
         this.repo = repo;
+        this.flightTicketClassRepo = flightTicketClassRepo;
+        this.seatRepo = seatRepo;
+        this.flightRepo = flightRepo;
+        this.airplaneRepo = airplaneRepo;
     }
     toUI(entity) {
         return {
@@ -65,6 +77,45 @@ let TicketClassesService = class TicketClassesService {
         const row = await this.repo.findOne({ where: { id } });
         if (!row)
             throw new common_1.BadRequestException('Không tìm thấy hạng vé');
+        const seatsUsingClass = await this.seatRepo.count({
+            where: { class: { id } }
+        });
+        console.log(`[DEBUG] Found ${seatsUsingClass} seats using ticketClassId=${id}`);
+        if (seatsUsingClass > 0) {
+            throw new common_1.BadRequestException(`Không thể xóa hạng vé "${row.name}" vì đang có ${seatsUsingClass} ghế đang sử dụng hạng vé này. ` +
+                `Vui lòng xóa hoặc chuyển các ghế này sang hạng vé khác trước.`);
+        }
+        const airplanes = await this.airplaneRepo.find();
+        const airplanesUsingClass = airplanes.filter(airplane => airplane.seatConfigs?.some(config => config.ticketClassId === id && (config.seatCount || 0) > 0));
+        console.log(`[DEBUG] Found ${airplanesUsingClass.length} airplanes using ticketClassId=${id} in seatConfigs (with seatCount > 0)`);
+        if (airplanesUsingClass.length > 0) {
+            const airplaneNames = airplanesUsingClass.map(a => a.name).join(', ');
+            throw new common_1.BadRequestException(`Không thể xóa hạng vé "${row.name}" vì đang được sử dụng trong cấu hình ghế của ${airplanesUsingClass.length} máy bay (${airplaneNames}). ` +
+                `Vui lòng cập nhật cấu hình máy bay trước.`);
+        }
+        const flightTicketClasses = await this.flightTicketClassRepo.find({
+            relations: ['flight', 'ticketClass'],
+            where: { ticketClass: { id } }
+        });
+        console.log(`[DEBUG] Found ${flightTicketClasses.length} FlightTicketClass records for ticketClassId=${id}`);
+        if (flightTicketClasses.length > 0) {
+            const activeFlights = flightTicketClasses.filter((ftc) => ftc.flight && ftc.flight.status !== 'completed' && ftc.flight.status !== 'cancelled');
+            console.log(`[DEBUG] Active flights: ${activeFlights.length}`, activeFlights.map(ftc => ({
+                code: ftc.flight?.flightCode,
+                status: ftc.flight?.status
+            })));
+            if (activeFlights.length > 0) {
+                const flightCodes = activeFlights
+                    .map(ftc => ftc.flight?.flightCode)
+                    .filter(Boolean)
+                    .join(', ');
+                throw new common_1.BadRequestException(`Không thể xóa hạng vé "${row.name}" vì đang có ${activeFlights.length} chuyến bay đang sử dụng (${flightCodes}). ` +
+                    `Chỉ có thể xóa khi tất cả các chuyến bay sử dụng hạng vé này có trạng thái 'Hoàn thành' hoặc 'Đã hủy'.`);
+            }
+        }
+        if (flightTicketClasses.length > 0) {
+            await this.flightTicketClassRepo.remove(flightTicketClasses);
+        }
         await this.repo.remove(row);
         return { message: 'Xóa hạng vé thành công' };
     }
@@ -73,6 +124,14 @@ exports.TicketClassesService = TicketClassesService;
 exports.TicketClassesService = TicketClassesService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(ticket_class_entity_1.TicketClass)),
-    __metadata("design:paramtypes", [typeorm_2.Repository])
+    __param(1, (0, typeorm_1.InjectRepository)(flight_ticket_class_entity_1.FlightTicketClass)),
+    __param(2, (0, typeorm_1.InjectRepository)(seat_entity_1.Seat)),
+    __param(3, (0, typeorm_1.InjectRepository)(flight_entity_1.Flight)),
+    __param(4, (0, typeorm_1.InjectRepository)(airplane_entity_1.Airplane)),
+    __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
+        typeorm_2.Repository,
+        typeorm_2.Repository,
+        typeorm_2.Repository])
 ], TicketClassesService);
 //# sourceMappingURL=ticket-classes.service.js.map

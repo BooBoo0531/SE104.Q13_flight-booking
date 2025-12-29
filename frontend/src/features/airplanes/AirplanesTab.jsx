@@ -8,24 +8,37 @@ const API_URL = "http://localhost:3000/airplanes";
 const AirplaneForm = ({ initialData, onSubmit, onCancel, ticketClasses }) => {
     const isEditMode = !!initialData;
 
-    const buildSeatConfigs = (plane) => {
-        if (plane?.seatConfigs?.length) return plane.seatConfigs;
-        // Fallback 2 hạng cũ
-        return [
-            { ticketClassId: ticketClasses?.find(tc => /pho thong|economy/i.test(tc.name || ''))?.id ?? 0, name: 'Phổ thông', prefix: 'E', seatCount: plane?.economySeats ?? 12 },
-            { ticketClassId: ticketClasses?.find(tc => /thuong gia|business|vip/i.test(tc.name || ''))?.id ?? 1, name: 'Thương gia', prefix: 'B', seatCount: plane?.businessSeats ?? 6 },
-        ];
+    const getPrefixForClassName = (name) => {
+        // Lấy chữ cái đầu tiên của tên hạng vé (normalize để xử lý dấu tiếng Việt)
+        const normalized = (name || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toUpperCase();
+        return normalized.charAt(0) || 'X';
     };
 
-    const [planeData, setPlaneData] = useState(isEditMode ? initialData : { name: 'Máy bay M', code: '', economySeats: 12, businessSeats: 6, seatConfigs: buildSeatConfigs({}) });
-    const [seatConfigs, setSeatConfigs] = useState(buildSeatConfigs(initialData));
+    const buildSeatConfigs = (plane, classes) => {
+        if (plane?.seatConfigs?.length) return plane.seatConfigs;
+        // Fallback: nếu có ticketClasses thì map theo classes, nếu không thì để rỗng
+        if (!classes || classes.length === 0) return [];
+        return classes.map(tc => ({
+            ticketClassId: tc.id,
+            name: tc.name,
+            prefix: getPrefixForClassName(tc.name),
+            seatCount: 0
+        }));
+    };
+
+    const [planeData, setPlaneData] = useState(isEditMode ? initialData : { name: 'Máy bay mới', code: '', economySeats: 0, businessSeats: 0, seatConfigs: buildSeatConfigs({}, ticketClasses) });
+    const [seatConfigs, setSeatConfigs] = useState(buildSeatConfigs(initialData, ticketClasses));
 
     useEffect(() => {
         if (initialData) {
             setPlaneData(initialData);
             // Luôn set seatConfigs từ initialData nếu có
             if (initialData.seatConfigs && initialData.seatConfigs.length > 0) {
-                // Remap seatConfigs để match với ticketClasses hiện tại
+                // Remap seatConfigs để match với ticketClasses hiện tại VÀ normalize prefix
                 const remappedConfigs = initialData.seatConfigs.map(cfg => {
                     if (ticketClasses && ticketClasses.length > 0) {
                         // Tìm ticketClass matching theo tên hoặc prefix
@@ -36,10 +49,16 @@ const AirplaneForm = ({ initialData, onSubmit, onCancel, ticketClasses }) => {
                                    (cfg.prefix && tc.name && (cfg.prefix.toLowerCase() === tc.name.charAt(0).toLowerCase()));
                         });
                         if (matchedClass) {
-                            return { ...cfg, ticketClassId: matchedClass.id };
+                            return { 
+                                ...cfg, 
+                                ticketClassId: matchedClass.id,
+                                name: matchedClass.name,
+                                prefix: getPrefixForClassName(matchedClass.name)
+                            };
                         }
                     }
-                    return cfg;
+                    // Nếu không match được class, vẫn normalize prefix dựa trên tên hiện có
+                    return { ...cfg, prefix: getPrefixForClassName(cfg.name) };
                 });
                 setSeatConfigs(remappedConfigs);
             } else if (ticketClasses && ticketClasses.length > 0) {
@@ -55,7 +74,7 @@ const AirplaneForm = ({ initialData, onSubmit, onCancel, ticketClasses }) => {
                     return {
                         ticketClassId: tc.id,
                         name: tc.name,
-                        prefix: (tc.name || '').charAt(0).toUpperCase(),
+                        prefix: getPrefixForClassName(tc.name),
                         seatCount: seatCount
                     };
                 });
@@ -75,7 +94,7 @@ const AirplaneForm = ({ initialData, onSubmit, onCancel, ticketClasses }) => {
                         merged.push({
                             ticketClassId: tc.id,
                             name: tc.name,
-                            prefix: (tc.name || '').charAt(0).toUpperCase(),
+                            prefix: getPrefixForClassName(tc.name),
                             seatCount: 0
                         });
                     }
@@ -92,7 +111,7 @@ const AirplaneForm = ({ initialData, onSubmit, onCancel, ticketClasses }) => {
             const exists = prev.some(cfg => String(cfg.ticketClassId) === String(ticketClassId));
             if (!exists) {
                 const tc = ticketClasses?.find(t => String(t.id) === String(ticketClassId));
-                const prefix = (tc?.name || '').charAt(0).toUpperCase() || 'X';
+                const prefix = getPrefixForClassName(tc?.name);
                 return [...prev, { ticketClassId, name: tc?.name || `Hạng ${ticketClassId}`, prefix, seatCount: value }];
             }
             return prev.map(cfg => String(cfg.ticketClassId) === String(ticketClassId) ? { ...cfg, seatCount: value } : cfg);
@@ -102,6 +121,15 @@ const AirplaneForm = ({ initialData, onSubmit, onCancel, ticketClasses }) => {
     const computedTotalSeats = seatConfigs.reduce((s, c) => s + (parseInt(c.seatCount, 10) || 0), 0);
     
     const handleSubmit = () => { 
+        // Validate cơ bản: yêu cầu code, name và tổng ghế > 0
+        if (!planeData.code || !planeData.name) {
+            alert("Vui lòng nhập đầy đủ Số hiệu (code) và Tên máy bay.");
+            return;
+        }
+        if (computedTotalSeats <= 0) {
+            alert("Vui lòng nhập số ghế cho ít nhất một hạng vé.");
+            return;
+        }
         const payload = { ...planeData, seatConfigs, totalSeats: computedTotalSeats };
         onSubmit(payload); 
     }
@@ -119,7 +147,7 @@ const AirplaneForm = ({ initialData, onSubmit, onCancel, ticketClasses }) => {
                     <h4 className="font-semibold text-gray-600 mb-2">Chi tiết hạng vé</h4>
                     {ticketClasses && ticketClasses.length > 0 ? (
                         ticketClasses.map((tc) => {
-                            const cfg = seatConfigs.find(c => String(c.ticketClassId) === String(tc.id)) || { ticketClassId: tc.id, name: tc.name, prefix: (tc.name || '').charAt(0).toUpperCase(), seatCount: 0 };
+                            const cfg = seatConfigs.find(c => String(c.ticketClassId) === String(tc.id)) || { ticketClassId: tc.id, name: tc.name, prefix: getPrefixForClassName(tc.name), seatCount: 0 };
                             return (
                                 <div className="flex items-center gap-2" key={tc.id}>
                                     <label className="w-32 text-sm font-medium text-gray-700">{tc.name}</label>
@@ -148,14 +176,14 @@ const AirplaneForm = ({ initialData, onSubmit, onCancel, ticketClasses }) => {
                     {seatConfigs.map((cfg) => 
                         Array.from({ length: parseInt(cfg.seatCount) || 0 }, (_, i) => {
                             const seatId = `${cfg.prefix}${i + 1}`;
-                            // Xác định màu dựa trên prefix, không phải index
-                            let bgColor = 'bg-cyan-200 text-cyan-800'; // Default: Phổ thông
-                            if (cfg.prefix.toLowerCase() === 'b') {
+                            // Xác định màu dựa trên prefix hoặc tên hạng
+                            let bgColor = 'bg-cyan-200 text-cyan-800'; // Default
+                            const nameLower = (cfg.name || '').toLowerCase();
+                            if (/thuong gia|business|vip/i.test(nameLower) || cfg.prefix.toUpperCase() === 'T') {
                                 bgColor = 'bg-teal-200 text-teal-800'; // Thương gia
-                            } else if (cfg.prefix.toLowerCase() === 'e') {
-                                bgColor = 'bg-cyan-200 text-cyan-800'; // Economy/Phổ thông
+                            } else if (/pho thong|economy/i.test(nameLower) || cfg.prefix.toUpperCase() === 'P') {
+                                bgColor = 'bg-cyan-200 text-cyan-800'; // Phổ thông
                             }
-                            // Tất cả prefix khác sẽ dùng cyan (phổ thông)
                             return (
                                 <div key={seatId} className={`w-10 h-10 ${bgColor} rounded flex items-center justify-center text-xs font-semibold`}>
                                     {seatId}
@@ -250,16 +278,32 @@ const AirplanesTab = ({ airplanes: propAirplanes, onUpdateAirplanes, ticketClass
 
     const handleSave = async (planeData) => {
         try {
+            const getPrefixForClassName = (name) => {
+                const n = (name || '').toLowerCase();
+                if (/pho thong|economy/.test(n)) return 'E';
+                if (/thuong gia|business|vip/.test(n)) return 'B';
+                return (name || '').charAt(0).toUpperCase() || 'X';
+            };
+
             const seatConfigs = Array.isArray(planeData.seatConfigs) ? planeData.seatConfigs.map(cfg => ({
                 ...cfg,
                 seatCount: Number(cfg.seatCount) || 0,
-                prefix: (cfg.prefix || cfg.name?.[0] || 'X').toString().toUpperCase()
+                prefix: cfg.prefix || getPrefixForClassName(cfg.name)
             })) : [];
+
+            const economySeats = seatConfigs
+                .filter(c => /pho thong|economy/i.test(c.name || '') || (c.prefix || '').toUpperCase() === 'P')
+                .reduce((s, c) => s + (Number(c.seatCount) || 0), 0);
+            const businessSeats = seatConfigs
+                .filter(c => /thuong gia|business|vip/i.test(c.name || '') || (c.prefix || '').toUpperCase() === 'T')
+                .reduce((s, c) => s + (Number(c.seatCount) || 0), 0);
 
             const payload = {
                 name: planeData.name,
                 code: planeData.code,
                 seatConfigs,
+                economySeats,
+                businessSeats,
             };
 
             if (editingAirplane) {
@@ -279,19 +323,20 @@ const AirplanesTab = ({ airplanes: propAirplanes, onUpdateAirplanes, ticketClass
                 alert("Cập nhật máy bay thành công!");
             } else {
                 const res = await axios.post(API_URL, payload);
-                const newPlane = {
-                    id: res.data.code,
-                    backendId: res.data.id,
-                    name: res.data.name,
-                    code: res.data.code,
-                    totalSeats: res.data.totalSeats,
-                    businessSeats: res.data.businessSeats,
-                    economySeats: res.data.economySeats,
-                    seatConfigs: res.data.seatConfigs,
-                };
-                const updatedAirplanes = [...airplanes, newPlane];
-                setAirplanes(updatedAirplanes);
-                onUpdateAirplanes(updatedAirplanes);
+                // Sau khi tạo, tải lại danh sách để đảm bảo đồng bộ seatConfigs và tổng ghế
+                const listRes = await axios.get(API_URL);
+                const fresh = Array.isArray(listRes?.data) ? listRes.data.map(p => ({
+                    id: p.code,
+                    backendId: p.id,
+                    name: p.name,
+                    code: p.code,
+                    totalSeats: p.totalSeats,
+                    businessSeats: p.businessSeats,
+                    economySeats: p.economySeats,
+                    seatConfigs: p.seatConfigs,
+                })) : [];
+                setAirplanes(fresh);
+                onUpdateAirplanes(fresh);
                 alert("Thêm máy bay thành công!");
             }
             setSubTab('list');

@@ -305,13 +305,15 @@ const FlightForm = ({ initialData, onSubmit, onCancel, airports, airplanes, rule
             <div className="space-y-4">
                 <div className="p-4 border rounded-lg space-y-2 bg-white"><h3 className="font-semibold text-gray-700">Số lượng ghế (lấy từ máy bay)</h3>
                     {(flightData.seatConfigs && flightData.seatConfigs.length > 0) ? (
-                        flightData.seatConfigs.map(cfg => (
-                            <div className="flex items-center" key={`${cfg.prefix}-${cfg.ticketClassId}`}>
-                                <label className="w-40 text-sm font-medium text-gray-700">{cfg.name || cfg.prefix}</label>
-                                <input type="number" readOnly value={cfg.seatCount} className="flex-1 p-2 border rounded bg-gray-100" />
-                                <span className="ml-3 text-xs text-gray-500">Prefix: {cfg.prefix}</span>
-                            </div>
-                        ))
+                        flightData.seatConfigs
+                            .filter(cfg => (cfg.seatCount || 0) > 0)
+                            .map(cfg => (
+                                <div className="flex items-center" key={`${cfg.prefix}-${cfg.ticketClassId}`}>
+                                    <label className="w-40 text-sm font-medium text-gray-700">{cfg.name || cfg.prefix}</label>
+                                    <input type="number" readOnly value={cfg.seatCount} className="flex-1 p-2 border rounded bg-gray-100" />
+                                    <span className="ml-3 text-xs text-gray-500">Prefix: {cfg.prefix}</span>
+                                </div>
+                            ))
                     ) : (
                         <p className="text-sm text-gray-500">Chọn máy bay để xem cấu hình ghế.</p>
                     )}

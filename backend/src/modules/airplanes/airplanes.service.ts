@@ -34,9 +34,12 @@ export class AirplanesService {
       // Ensure seatConfigs are returned (default to legacy if not set)
       return planes.map(plane => {
         if (!plane.seatConfigs || plane.seatConfigs.length === 0) {
+          // Tạo prefix từ chữ cái đầu của tên hạng
+          const econPrefix = this.buildPrefix('', 'Phổ thông', new Set());
+          const bizPrefix = this.buildPrefix('', 'Thương gia', new Set([econPrefix]));
           plane.seatConfigs = [
-            { ticketClassId: 0, name: 'Phổ thông', prefix: 'E', seatCount: plane.economySeats },
-            { ticketClassId: 1, name: 'Thương gia', prefix: 'B', seatCount: plane.businessSeats },
+            { ticketClassId: 0, name: 'Phổ thông', prefix: econPrefix, seatCount: plane.economySeats },
+            { ticketClassId: 1, name: 'Thương gia', prefix: bizPrefix, seatCount: plane.businessSeats },
           ];
         }
         return plane;
@@ -70,10 +73,14 @@ export class AirplanesService {
   // ---------- Helpers ----------
   private normalizeSeatConfigs(raw: any[] = [], fallback: any): SeatConfig[] {
     if (!Array.isArray(raw) || raw.length === 0) {
-      // fallback to legacy 2 classes
+      // fallback to legacy 2 classes - dùng chữ cái đầu thay vì E/B
+      const seen = new Set<string>();
+      const econPrefix = this.buildPrefix('', 'Phổ thông', seen);
+      seen.add(econPrefix);
+      const bizPrefix = this.buildPrefix('', 'Thương gia', seen);
       return [
-        { ticketClassId: 0, name: 'Phổ thông', prefix: 'E', seatCount: Number(fallback?.economySeats ?? 0) },
-        { ticketClassId: 1, name: 'Thương gia', prefix: 'B', seatCount: Number(fallback?.businessSeats ?? 0) },
+        { ticketClassId: 0, name: 'Phổ thông', prefix: econPrefix, seatCount: Number(fallback?.economySeats ?? 0) },
+        { ticketClassId: 1, name: 'Thương gia', prefix: bizPrefix, seatCount: Number(fallback?.businessSeats ?? 0) },
       ];
     }
 
@@ -91,6 +98,7 @@ export class AirplanesService {
   private buildPrefix(prefix: any, name: string, seen: Set<string>): string {
     let p = (prefix ?? '').toString().trim().toUpperCase();
     if (!p) {
+      // Lấy chữ cái đầu tiên của tên hạng vé (normalize để bỏ dấu tiếng Việt)
       const normalized = name
         .normalize('NFD')
         .replace(/[^\w\s]/g, '')
@@ -118,8 +126,8 @@ export class AirplanesService {
   }
 
   private deriveLegacySeats(seatConfigs: SeatConfig[], fallback: any): { economySeats: number; businessSeats: number } {
-    const economy = seatConfigs.find((c) => c.prefix === 'E') || seatConfigs.find((c) => /PHO\s*THONG|ECONOMY/i.test(c.name || ''));
-    const business = seatConfigs.find((c) => c.prefix === 'B') || seatConfigs.find((c) => /THUONG\s*GIA|BUSINESS/i.test(c.name || ''));
+    const economy = seatConfigs.find((c) => /PHO\s*THONG|ECONOMY/i.test(c.name || '')) || seatConfigs.find((c) => c.prefix === 'P');
+    const business = seatConfigs.find((c) => /THUONG\s*GIA|BUSINESS/i.test(c.name || '')) || seatConfigs.find((c) => c.prefix === 'T');
     return {
       economySeats: economy ? Number(economy.seatCount) || 0 : Number(fallback?.economySeats ?? 0),
       businessSeats: business ? Number(business.seatCount) || 0 : Number(fallback?.businessSeats ?? 0),

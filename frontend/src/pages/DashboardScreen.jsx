@@ -62,6 +62,16 @@ export default function DashboardScreen() {
     const classes = Array.isArray(ticketClassesData) ? ticketClassesData : [];
     const hasSeatConfigs = Array.isArray(plane.seatConfigs) && plane.seatConfigs.length > 0;
 
+    // Helper để lấy chữ cái đầu từ tên hạng vé
+    const getPrefixFromName = (name) => {
+      const normalized = (name || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toUpperCase();
+      return normalized.charAt(0) || 'X';
+    };
+
     if (hasSeatConfigs) {
       return plane.seatConfigs.map((cfg) => {
         const matchedClass = classes.find((tc) => {
@@ -72,9 +82,11 @@ export default function DashboardScreen() {
         });
 
         if (matchedClass) {
-          return { ...cfg, ticketClassId: matchedClass.id };
+          // Normalize prefix dựa trên tên class
+          return { ...cfg, ticketClassId: matchedClass.id, name: matchedClass.name, prefix: getPrefixFromName(matchedClass.name) };
         }
-        return cfg;
+        // Nếu không match được, vẫn normalize prefix dựa trên tên hiện có
+        return { ...cfg, prefix: getPrefixFromName(cfg.name) };
       });
     }
 
@@ -87,7 +99,7 @@ export default function DashboardScreen() {
       fallback.push({
         ticketClassId: phoThongClass.id,
         name: phoThongClass.name,
-        prefix: "E",
+        prefix: getPrefixFromName(phoThongClass.name),
         seatCount: plane.economySeats || 0,
       });
     }
@@ -95,7 +107,7 @@ export default function DashboardScreen() {
       fallback.push({
         ticketClassId: thuongGiaClass.id,
         name: thuongGiaClass.name,
-        prefix: "B",
+        prefix: getPrefixFromName(thuongGiaClass.name),
         seatCount: plane.businessSeats || 0,
       });
     }
@@ -104,8 +116,8 @@ export default function DashboardScreen() {
 
     // Fallback cứng nếu chưa tải được ticketClasses
     return [
-      { ticketClassId: 3, name: "Phổ thông", prefix: "E", seatCount: plane.economySeats || 0 },
-      { ticketClassId: 4, name: "Thương gia", prefix: "B", seatCount: plane.businessSeats || 0 },
+      { ticketClassId: 3, name: "Phổ thông", prefix: getPrefixFromName("Phổ thông"), seatCount: plane.economySeats || 0 },
+      { ticketClassId: 4, name: "Thương gia", prefix: getPrefixFromName("Thương gia"), seatCount: plane.businessSeats || 0 },
     ];
   };
 

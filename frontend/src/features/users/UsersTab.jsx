@@ -133,11 +133,15 @@ const UsersTab = ({ users: propUsers, permissions: propPermissions, onUpdateUser
     const handleCreateUser = async (newUser) => { 
         try {
             const res = await axios.post(API_URL, newUser);
-            const updatedUsers = [...users, res.data];
-            setUsers(updatedUsers);
-            onUpdateUsers(updatedUsers);
+            const created = res?.data || null;
+            // Sau khi tạo, tải lại danh sách người dùng từ backend để tránh lệch state gây crash
+            const listRes = await axios.get(API_URL);
+            const freshUsers = Array.isArray(listRes?.data) ? listRes.data : [];
+            setUsers(freshUsers);
+            onUpdateUsers(freshUsers);
             alert("Tạo tài khoản thành công!");
         } catch (error) {
+            console.error("Create user error:", error);
             alert("Lỗi tạo user: " + (error.response?.data?.message || error.message));
         }
     };

@@ -40,9 +40,11 @@ let AirplanesService = class AirplanesService {
         return this.airplanesRepository.find({ order: { id: 'DESC' } }).then(planes => {
             return planes.map(plane => {
                 if (!plane.seatConfigs || plane.seatConfigs.length === 0) {
+                    const econPrefix = this.buildPrefix('', 'Phổ thông', new Set());
+                    const bizPrefix = this.buildPrefix('', 'Thương gia', new Set([econPrefix]));
                     plane.seatConfigs = [
-                        { ticketClassId: 0, name: 'Phổ thông', prefix: 'E', seatCount: plane.economySeats },
-                        { ticketClassId: 1, name: 'Thương gia', prefix: 'B', seatCount: plane.businessSeats },
+                        { ticketClassId: 0, name: 'Phổ thông', prefix: econPrefix, seatCount: plane.economySeats },
+                        { ticketClassId: 1, name: 'Thương gia', prefix: bizPrefix, seatCount: plane.businessSeats },
                     ];
                 }
                 return plane;
@@ -69,9 +71,13 @@ let AirplanesService = class AirplanesService {
     }
     normalizeSeatConfigs(raw = [], fallback) {
         if (!Array.isArray(raw) || raw.length === 0) {
+            const seen = new Set();
+            const econPrefix = this.buildPrefix('', 'Phổ thông', seen);
+            seen.add(econPrefix);
+            const bizPrefix = this.buildPrefix('', 'Thương gia', seen);
             return [
-                { ticketClassId: 0, name: 'Phổ thông', prefix: 'E', seatCount: Number(fallback?.economySeats ?? 0) },
-                { ticketClassId: 1, name: 'Thương gia', prefix: 'B', seatCount: Number(fallback?.businessSeats ?? 0) },
+                { ticketClassId: 0, name: 'Phổ thông', prefix: econPrefix, seatCount: Number(fallback?.economySeats ?? 0) },
+                { ticketClassId: 1, name: 'Thương gia', prefix: bizPrefix, seatCount: Number(fallback?.businessSeats ?? 0) },
             ];
         }
         const seen = new Set();
@@ -113,8 +119,8 @@ let AirplanesService = class AirplanesService {
         return Number(fallback?.economySeats ?? 0) + Number(fallback?.businessSeats ?? 0);
     }
     deriveLegacySeats(seatConfigs, fallback) {
-        const economy = seatConfigs.find((c) => c.prefix === 'E') || seatConfigs.find((c) => /PHO\s*THONG|ECONOMY/i.test(c.name || ''));
-        const business = seatConfigs.find((c) => c.prefix === 'B') || seatConfigs.find((c) => /THUONG\s*GIA|BUSINESS/i.test(c.name || ''));
+        const economy = seatConfigs.find((c) => /PHO\s*THONG|ECONOMY/i.test(c.name || '')) || seatConfigs.find((c) => c.prefix === 'P');
+        const business = seatConfigs.find((c) => /THUONG\s*GIA|BUSINESS/i.test(c.name || '')) || seatConfigs.find((c) => c.prefix === 'T');
         return {
             economySeats: economy ? Number(economy.seatCount) || 0 : Number(fallback?.economySeats ?? 0),
             businessSeats: business ? Number(business.seatCount) || 0 : Number(fallback?.businessSeats ?? 0),

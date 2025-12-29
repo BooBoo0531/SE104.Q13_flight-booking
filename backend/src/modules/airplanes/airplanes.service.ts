@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Airplane, SeatConfig } from './entities/airplane.entity';
@@ -12,8 +12,15 @@ export class AirplanesService {
     private airplanesRepository: Repository<Airplane>,
   ) {}
 
-  create(createAirplaneDto: CreateAirplaneDto) {
-    const { seatConfigs = [], ...rest } = createAirplaneDto;
+  async create(createAirplaneDto: CreateAirplaneDto) {
+    const code = (createAirplaneDto.code ?? '').trim();
+
+    const existed = await this.airplanesRepository.findOne({ where: { code } });
+    if (existed) {
+      throw new ConflictException('Mã máy bay đã tồn tại');
+    }
+
+    const { seatConfigs = [], ...rest } = { ...createAirplaneDto, code };
 
     const normalizedSeatConfigs = this.normalizeSeatConfigs(seatConfigs, rest);
     const totalSeats = this.computeTotalSeats(normalizedSeatConfigs, rest);
@@ -26,7 +33,15 @@ export class AirplanesService {
       economySeats,
       businessSeats,
     });
-    return this.airplanesRepository.save(newPlane);
+
+    try {
+      return await this.airplanesRepository.save(newPlane);
+    } catch (error) {
+      if (this.isDuplicateError(error)) {
+        throw new ConflictException('Mã máy bay đã tồn tại');
+      }
+      throw error;
+    }
   }
 
   findAll() {
@@ -53,21 +68,41 @@ export class AirplanesService {
   }
 
   async update(id: number, updateAirplaneDto: UpdateAirplaneDto) {
-    const { seatConfigs = [], ...rest } = updateAirplaneDto;
+    const code = updateAirplaneDto.code?.trim();
+    if (code) {
+      const existed = await this.airplanesRepository.findOne({ where: { code } });
+      if (existed && existed.id !== id) {
+        throw new ConflictException('Mã máy bay đã tồn tại');
+      }
+    }
+
+    const { seatConfigs = [], ...rest } = code ? { ...updateAirplaneDto, code } : updateAirplaneDto;
 
     const normalizedSeatConfigs = this.normalizeSeatConfigs(seatConfigs, rest);
     const totalSeats = this.computeTotalSeats(normalizedSeatConfigs, rest);
     const { economySeats, businessSeats } = this.deriveLegacySeats(normalizedSeatConfigs, rest);
 
-    await this.airplanesRepository.update(id, {
-      ...rest,
-      seatConfigs: normalizedSeatConfigs,
-      totalSeats,
-      economySeats,
-      businessSeats,
-    });
+    try {
+      await this.airplanesRepository.update(id, {
+        ...rest,
+        seatConfigs: normalizedSeatConfigs,
+        totalSeats,
+        economySeats,
+        businessSeats,
+      });
+    } catch (error) {
+      if (this.isDuplicateError(error)) {
+        throw new ConflictException('Mã máy bay đã tồn tại');
+      }
+      throw error;
+    }
 
     return this.airplanesRepository.findOneBy({ id });
+  }
+
+  private isDuplicateError(error: any): boolean {
+    const code = error?.code;
+    return code === 'ER_DUP_ENTRY' || code === '23505' || code === 'SQLITE_CONSTRAINT';
   }
 
   // ---------- Helpers ----------

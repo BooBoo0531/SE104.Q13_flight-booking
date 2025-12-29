@@ -34,6 +34,7 @@ __decorate([
     __metadata("design:type", String)
 ], Airplane.prototype, "name", void 0);
 __decorate([
+    (0, typeorm_1.Index)({ unique: true }),
     (0, typeorm_1.Column)({ name: 'SoHieu' }),
     __metadata("design:type", String)
 ], Airplane.prototype, "code", void 0);

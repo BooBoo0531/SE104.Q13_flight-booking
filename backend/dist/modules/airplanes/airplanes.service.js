@@ -22,8 +22,13 @@ let AirplanesService = class AirplanesService {
     constructor(airplanesRepository) {
         this.airplanesRepository = airplanesRepository;
     }
-    create(createAirplaneDto) {
-        const { seatConfigs = [], ...rest } = createAirplaneDto;
+    async create(createAirplaneDto) {
+        const code = (createAirplaneDto.code ?? '').trim();
+        const existed = await this.airplanesRepository.findOne({ where: { code } });
+        if (existed) {
+            throw new common_1.ConflictException('Mã máy bay đã tồn tại');
+        }
+        const { seatConfigs = [], ...rest } = { ...createAirplaneDto, code };
         const normalizedSeatConfigs = this.normalizeSeatConfigs(seatConfigs, rest);
         const totalSeats = this.computeTotalSeats(normalizedSeatConfigs, rest);
         const { economySeats, businessSeats } = this.deriveLegacySeats(normalizedSeatConfigs, rest);
@@ -34,7 +39,15 @@ let AirplanesService = class AirplanesService {
             economySeats,
             businessSeats,
         });
-        return this.airplanesRepository.save(newPlane);
+        try {
+            return await this.airplanesRepository.save(newPlane);
+        }
+        catch (error) {
+            if (this.isDuplicateError(error)) {
+                throw new common_1.ConflictException('Mã máy bay đã tồn tại');
+            }
+            throw error;
+        }
     }
     findAll() {
         return this.airplanesRepository.find({ order: { id: 'DESC' } }).then(planes => {
@@ -56,18 +69,37 @@ let AirplanesService = class AirplanesService {
         return { deleted: true };
     }
     async update(id, updateAirplaneDto) {
-        const { seatConfigs = [], ...rest } = updateAirplaneDto;
+        const code = updateAirplaneDto.code?.trim();
+        if (code) {
+            const existed = await this.airplanesRepository.findOne({ where: { code } });
+            if (existed && existed.id !== id) {
+                throw new common_1.ConflictException('Mã máy bay đã tồn tại');
+            }
+        }
+        const { seatConfigs = [], ...rest } = code ? { ...updateAirplaneDto, code } : updateAirplaneDto;
         const normalizedSeatConfigs = this.normalizeSeatConfigs(seatConfigs, rest);
         const totalSeats = this.computeTotalSeats(normalizedSeatConfigs, rest);
         const { economySeats, businessSeats } = this.deriveLegacySeats(normalizedSeatConfigs, rest);
-        await this.airplanesRepository.update(id, {
-            ...rest,
-            seatConfigs: normalizedSeatConfigs,
-            totalSeats,
-            economySeats,
-            businessSeats,
-        });
+        try {
+            await this.airplanesRepository.update(id, {
+                ...rest,
+                seatConfigs: normalizedSeatConfigs,
+                totalSeats,
+                economySeats,
+                businessSeats,
+            });
+        }
+        catch (error) {
+            if (this.isDuplicateError(error)) {
+                throw new common_1.ConflictException('Mã máy bay đã tồn tại');
+            }
+            throw error;
+        }
         return this.airplanesRepository.findOneBy({ id });
+    }
+    isDuplicateError(error) {
+        const code = error?.code;
+        return code === 'ER_DUP_ENTRY' || code === '23505' || code === 'SQLITE_CONSTRAINT';
     }
     normalizeSeatConfigs(raw = [], fallback) {
         if (!Array.isArray(raw) || raw.length === 0) {

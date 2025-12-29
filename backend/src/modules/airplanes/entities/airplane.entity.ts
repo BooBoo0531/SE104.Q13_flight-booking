@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, OneToMany, Index } from 'typeorm';
 import { Flight } from '../../flights/entities/flight.entity';
 import { Seat } from '../../seats/entities/seat.entity';
 
@@ -17,6 +17,7 @@ export class Airplane {
   @Column({ name: 'TenMayBay' })
   name: string;
 
+  @Index({ unique: true })
   @Column({ name: 'SoHieu' })
   code: string;
 

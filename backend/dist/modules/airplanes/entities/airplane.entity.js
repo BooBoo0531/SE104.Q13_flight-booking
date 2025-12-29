@@ -20,6 +20,7 @@ let Airplane = class Airplane {
     totalSeats;
     economySeats;
     businessSeats;
+    seatConfigs;
     flights;
     seats;
 };
@@ -48,6 +49,10 @@ __decorate([
     (0, typeorm_1.Column)({ name: 'GheThuongGia' }),
     __metadata("design:type", Number)
 ], Airplane.prototype, "businessSeats", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'CauHinhGhe', type: 'json', nullable: true }),
+    __metadata("design:type", Array)
+], Airplane.prototype, "seatConfigs", void 0);
 __decorate([
     (0, typeorm_1.OneToMany)(() => flight_entity_1.Flight, (flight) => flight.plane),
     __metadata("design:type", Array)

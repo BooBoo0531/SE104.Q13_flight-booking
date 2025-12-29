@@ -2,6 +2,13 @@ import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 import { Flight } from '../../flights/entities/flight.entity';
 import { Seat } from '../../seats/entities/seat.entity';
 
+export interface SeatConfig {
+  ticketClassId: number;
+  name: string;
+  prefix: string;
+  seatCount: number;
+}
+
 @Entity({ name: 'MAYBAY' })
 export class Airplane {
   @PrimaryGeneratedColumn({ name: 'MaMayBay' })
@@ -21,6 +28,9 @@ export class Airplane {
 
   @Column({ name: 'GheThuongGia' })
   businessSeats: number;
+
+  @Column({ name: 'CauHinhGhe', type: 'json', nullable: true })
+  seatConfigs: SeatConfig[];
 
   @OneToMany(() => Flight, (flight) => flight.plane)
   flights: Flight[];

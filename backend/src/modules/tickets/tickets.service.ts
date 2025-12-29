@@ -115,23 +115,40 @@ export class TicketsService {
     return count > 0;
   }
 
-  // --- HÀM LOGIC MỚI: Kiểm tra ghế có tồn tại không dựa trên Capacity của máy bay ---
+  // --- Kiểm tra ghế có tồn tại không dựa trên seatConfigs ---
   private validateSeatExistence(seatCode: string, plane: any) {
-    // seatCode format mong đợi: B1, B2... hoặc E1, E2...
-    const match = seatCode.match(/^([BE])(\d+)$/);
+    // Định dạng: PREFIX + số, ví dụ B1, E10, P3...
+    const match = seatCode.match(/^([A-Z]{1,3})(\d+)$/i);
     if (!match) throw new BadRequestException(`Mã ghế không hợp lệ (VD: B1, E10). Nhận được: ${seatCode}`);
 
-    const type = match[1]; // B hoặc E
+    const prefix = match[1].toUpperCase();
     const num = parseInt(match[2], 10);
 
-    if (type === 'B') {
-        if (num > plane.businessSeats) {
-             throw new NotFoundException(`Máy bay chỉ có ${plane.businessSeats} ghế thương gia (bạn chọn ${seatCode}).`);
-        }
-    } else if (type === 'E') {
-        if (num > plane.economySeats) {
-             throw new NotFoundException(`Máy bay chỉ có ${plane.economySeats} ghế phổ thông (bạn chọn ${seatCode}).`);
-        }
+    const seatConfigs: any[] = Array.isArray(plane?.seatConfigs) ? plane.seatConfigs : [];
+
+    if (seatConfigs.length > 0) {
+      const cfg = seatConfigs.find((c) => (c.prefix || '').toUpperCase() === prefix);
+      if (!cfg) {
+        throw new NotFoundException(`Máy bay không có cấu hình ghế với tiền tố ${prefix}.`);
+      }
+      const maxSeat = Number(cfg.seatCount) || 0;
+      if (num < 1 || num > maxSeat) {
+        throw new NotFoundException(`Máy bay chỉ có ${maxSeat} ghế cho hạng ${cfg.name || prefix} (bạn chọn ${seatCode}).`);
+      }
+      return;
+    }
+
+    // Fallback cũ: chỉ B/E
+    if (prefix === 'B') {
+      if (num > plane.businessSeats) {
+        throw new NotFoundException(`Máy bay chỉ có ${plane.businessSeats} ghế thương gia (bạn chọn ${seatCode}).`);
+      }
+    } else if (prefix === 'E') {
+      if (num > plane.economySeats) {
+        throw new NotFoundException(`Máy bay chỉ có ${plane.economySeats} ghế phổ thông (bạn chọn ${seatCode}).`);
+      }
+    } else {
+      throw new NotFoundException(`Máy bay không hỗ trợ hạng ghế với tiền tố ${prefix}.`);
     }
   }
 

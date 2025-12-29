@@ -11,4 +11,8 @@ export declare class AirplanesService {
         deleted: boolean;
     }>;
     update(id: number, updateAirplaneDto: UpdateAirplaneDto): Promise<Airplane | null>;
+    private normalizeSeatConfigs;
+    private buildPrefix;
+    private computeTotalSeats;
+    private deriveLegacySeats;
 }

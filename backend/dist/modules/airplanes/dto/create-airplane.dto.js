@@ -11,11 +11,36 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateAirplaneDto = void 0;
 const class_validator_1 = require("class-validator");
+const class_transformer_1 = require("class-transformer");
+class SeatConfigDto {
+    ticketClassId;
+    name;
+    prefix;
+    seatCount;
+}
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], SeatConfigDto.prototype, "ticketClassId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], SeatConfigDto.prototype, "name", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], SeatConfigDto.prototype, "prefix", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], SeatConfigDto.prototype, "seatCount", void 0);
 class CreateAirplaneDto {
     name;
     code;
     economySeats;
     businessSeats;
+    seatConfigs;
 }
 exports.CreateAirplaneDto = CreateAirplaneDto;
 __decorate([
@@ -38,4 +63,11 @@ __decorate([
     (0, class_validator_1.Min)(0),
     __metadata("design:type", Number)
 ], CreateAirplaneDto.prototype, "businessSeats", void 0);
+__decorate([
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => SeatConfigDto),
+    __metadata("design:type", Array)
+], CreateAirplaneDto.prototype, "seatConfigs", void 0);
 //# sourceMappingURL=create-airplane.dto.js.map

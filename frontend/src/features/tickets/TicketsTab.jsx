@@ -15,7 +15,7 @@ const normalizeKey = (s) =>
 
 const guessSeatGroupByClassName = (name) => {
   const k = normalizeKey(name);
-  // business/vip/first => Business (B)
+  // Trả về prefix thống nhất: 'b' cho Thương gia/VIP/First, 'e' cho Phổ thông
   if (
     k.includes("thuong gia") ||
     k.includes("thuong") ||
@@ -24,9 +24,9 @@ const guessSeatGroupByClassName = (name) => {
     k.includes("hang nhat") ||
     k.includes("first")
   ) {
-    return "business";
+    return "b";
   }
-  return "economy";
+  return "e";
 };
 
 const formatVND = (n) =>
@@ -104,10 +104,14 @@ const TicketForm = ({
     if (!stillExists) setSelectedClass(defaultClass);
   }, [safeTicketClasses, defaultClass]); // eslint-disable-line
 
-  // ✅ group ghế theo tên hạng vé (B/E)
+  // ✅ group ghế theo tên hạng vé (B/E) hoặc prefix từ seatConfigs
   const seatGroup = useMemo(() => {
+    if (selectedFlight?.seatConfigs?.length) {
+      const cfg = selectedFlight.seatConfigs.find(c => String(c.ticketClassId) === String(selectedClass?.id));
+      if (cfg?.prefix) return cfg.prefix.toLowerCase();
+    }
     return guessSeatGroupByClassName(selectedClass?.name);
-  }, [selectedClass?.name]);
+  }, [selectedClass?.name, selectedClass?.id, selectedFlight?.seatConfigs]);
 
   // ✅ giá theo % hạng vé
   const computedPrice = useMemo(() => {
@@ -178,8 +182,8 @@ const TicketForm = ({
   // reset seat nếu đổi hạng vé không đúng nhóm ghế
   useEffect(() => {
     if (!selectedSeat) return;
-    const seatBelongsTo = selectedSeat.startsWith("B") ? "business" : "economy";
-    if (seatBelongsTo !== seatGroup) setSelectedSeat(null);
+    const seatPrefix = selectedSeat.match(/^[A-Z]+/)?.[0]?.toLowerCase() || '';
+    if (seatPrefix !== seatGroup) setSelectedSeat(null);
   }, [seatGroup, selectedSeat]);
 
   const handleFlightSelect = (flightId) => {
@@ -236,7 +240,7 @@ const TicketForm = ({
   const Seat = ({ id, type, isTaken }) => {
     const isSelected = selectedSeat === id;
 
-    // type = business/economy; seatGroup = business/economy
+    // type = prefix from seatConfigs (e.g., 'e', 'b', 'p'); seatGroup = selected class prefix
     const isDisabledByType = type !== seatGroup;
 
     let seatClassStyle = "";
@@ -244,9 +248,10 @@ const TicketForm = ({
       seatClassStyle = "bg-gray-200 text-gray-400 cursor-not-allowed";
     else if (isTaken) seatClassStyle = "bg-gray-500 cursor-not-allowed text-white";
     else if (isSelected) seatClassStyle = "bg-red-500 text-white";
-    else if (type === "business")
+    else if (type === 'b' || type === 'business')
       seatClassStyle = "bg-teal-200 hover:bg-teal-300 text-teal-800";
-    else seatClassStyle = "bg-cyan-200 hover:bg-cyan-300 text-cyan-800";
+    else
+      seatClassStyle = "bg-cyan-200 hover:bg-cyan-300 text-cyan-800";
 
     const canClick = !isTaken && !isDisabledByType;
 
@@ -367,15 +372,32 @@ const TicketForm = ({
         </div>
 
         <div className={`grid grid-cols-6 gap-2 ${!selectedFlight ? "pointer-events-none" : ""}`}>
-          {airplane &&
-            Array.from({ length: airplane.businessSeats }, (_, i) => `B${i + 1}`).map((seatId) => (
-              <Seat key={seatId} id={seatId} type="business" isTaken={bookedSeats.includes(seatId)} />
-            ))}
-
-          {airplane &&
-            Array.from({ length: airplane.economySeats }, (_, i) => `E${i + 1}`).map((seatId) => (
-              <Seat key={seatId} id={seatId} type="economy" isTaken={bookedSeats.includes(seatId)} />
-            ))}
+          {selectedFlight?.seatConfigs?.length ? (
+            // ✅ Dynamic seat generation from seatConfigs
+            selectedFlight.seatConfigs.map((cfg) =>
+              Array.from({ length: cfg.seatCount }, (_, i) => {
+                const seatId = `${cfg.prefix}${i + 1}`;
+                return (
+                  <Seat
+                    key={seatId}
+                    id={seatId}
+                    type={cfg.prefix.toLowerCase()}
+                    isTaken={bookedSeats.includes(seatId)}
+                  />
+                );
+              })
+            )
+          ) : airplane ? (
+            // ✅ Fallback: legacy B/E seats
+            <>
+              {Array.from({ length: airplane.businessSeats }, (_, i) => `B${i + 1}`).map((seatId) => (
+                <Seat key={seatId} id={seatId} type="b" isTaken={bookedSeats.includes(seatId)} />
+              ))}
+              {Array.from({ length: airplane.economySeats }, (_, i) => `E${i + 1}`).map((seatId) => (
+                <Seat key={seatId} id={seatId} type="e" isTaken={bookedSeats.includes(seatId)} />
+              ))}
+            </>
+          ) : null}
         </div>
       </div>
     </form>

@@ -5,15 +5,105 @@ import ConfirmationModal from "../../components/common/ConfirmationModal";
 
 const API_URL = "http://localhost:3000/airplanes";
 
-const AirplaneForm = ({ initialData, onSubmit, onCancel }) => {
+const AirplaneForm = ({ initialData, onSubmit, onCancel, ticketClasses }) => {
     const isEditMode = !!initialData;
-    const [planeData, setPlaneData] = useState(isEditMode ? initialData : { name: 'Máy bay M', code: '', economySeats: 12, businessSeats: 6 });
+
+    const buildSeatConfigs = (plane) => {
+        if (plane?.seatConfigs?.length) return plane.seatConfigs;
+        // Fallback 2 hạng cũ
+        return [
+            { ticketClassId: ticketClasses?.find(tc => /pho thong|economy/i.test(tc.name || ''))?.id ?? 0, name: 'Phổ thông', prefix: 'E', seatCount: plane?.economySeats ?? 12 },
+            { ticketClassId: ticketClasses?.find(tc => /thuong gia|business|vip/i.test(tc.name || ''))?.id ?? 1, name: 'Thương gia', prefix: 'B', seatCount: plane?.businessSeats ?? 6 },
+        ];
+    };
+
+    const [planeData, setPlaneData] = useState(isEditMode ? initialData : { name: 'Máy bay M', code: '', economySeats: 12, businessSeats: 6, seatConfigs: buildSeatConfigs({}) });
+    const [seatConfigs, setSeatConfigs] = useState(buildSeatConfigs(initialData));
+
+    useEffect(() => {
+        if (initialData) {
+            setPlaneData(initialData);
+            // Luôn set seatConfigs từ initialData nếu có
+            if (initialData.seatConfigs && initialData.seatConfigs.length > 0) {
+                // Remap seatConfigs để match với ticketClasses hiện tại
+                const remappedConfigs = initialData.seatConfigs.map(cfg => {
+                    if (ticketClasses && ticketClasses.length > 0) {
+                        // Tìm ticketClass matching theo tên hoặc prefix
+                        const matchedClass = ticketClasses.find(tc => {
+                            const tcName = (tc.name || '').toLowerCase();
+                            const cfgName = (cfg.name || '').toLowerCase();
+                            return tcName === cfgName || 
+                                   (cfg.prefix && tc.name && (cfg.prefix.toLowerCase() === tc.name.charAt(0).toLowerCase()));
+                        });
+                        if (matchedClass) {
+                            return { ...cfg, ticketClassId: matchedClass.id };
+                        }
+                    }
+                    return cfg;
+                });
+                setSeatConfigs(remappedConfigs);
+            } else if (ticketClasses && ticketClasses.length > 0) {
+                // Build từ legacy fields nếu không có seatConfigs
+                const legacyConfigs = ticketClasses.map(tc => {
+                    const name = tc.name || '';
+                    let seatCount = 0;
+                    if (/pho thong|economy/i.test(name)) {
+                        seatCount = initialData.economySeats || 0;
+                    } else if (/thuong gia|business|vip/i.test(name)) {
+                        seatCount = initialData.businessSeats || 0;
+                    }
+                    return {
+                        ticketClassId: tc.id,
+                        name: tc.name,
+                        prefix: (tc.name || '').charAt(0).toUpperCase(),
+                        seatCount: seatCount
+                    };
+                });
+                setSeatConfigs(legacyConfigs);
+            }
+        }
+    }, [initialData, ticketClasses]);
+
+    // Khi ticketClasses thay đổi ở create mode, cập nhật seatConfigs
+    useEffect(() => {
+        if (!isEditMode && ticketClasses && ticketClasses.length > 0) {
+            setSeatConfigs(prev => {
+                // Thêm ticket classes mới nếu chưa có
+                const merged = [...prev];
+                ticketClasses.forEach(tc => {
+                    if (!merged.find(c => String(c.ticketClassId) === String(tc.id))) {
+                        merged.push({
+                            ticketClassId: tc.id,
+                            name: tc.name,
+                            prefix: (tc.name || '').charAt(0).toUpperCase(),
+                            seatCount: 0
+                        });
+                    }
+                });
+                return merged;
+            });
+        }
+    }, [ticketClasses, isEditMode]);
 
     const handleInputChange = (e) => { const { name, value } = e.target; setPlaneData(prev => ({...prev, [name]: value})); }
-    const totalSeats = (parseInt(planeData.economySeats, 10) || 0) + (parseInt(planeData.businessSeats, 10) || 0);
+
+    const handleSeatConfigChange = (ticketClassId, value) => {
+        setSeatConfigs(prev => {
+            const exists = prev.some(cfg => String(cfg.ticketClassId) === String(ticketClassId));
+            if (!exists) {
+                const tc = ticketClasses?.find(t => String(t.id) === String(ticketClassId));
+                const prefix = (tc?.name || '').charAt(0).toUpperCase() || 'X';
+                return [...prev, { ticketClassId, name: tc?.name || `Hạng ${ticketClassId}`, prefix, seatCount: value }];
+            }
+            return prev.map(cfg => String(cfg.ticketClassId) === String(ticketClassId) ? { ...cfg, seatCount: value } : cfg);
+        });
+    };
+
+    const computedTotalSeats = seatConfigs.reduce((s, c) => s + (parseInt(c.seatCount, 10) || 0), 0);
     
     const handleSubmit = () => { 
-        onSubmit({ ...planeData, totalSeats }); 
+        const payload = { ...planeData, seatConfigs, totalSeats: computedTotalSeats };
+        onSubmit(payload); 
     }
 
     return (
@@ -27,17 +117,52 @@ const AirplaneForm = ({ initialData, onSubmit, onCancel }) => {
                 
                 <div className="p-4 border rounded-lg bg-gray-50 space-y-3">
                     <h4 className="font-semibold text-gray-600 mb-2">Chi tiết hạng vé</h4>
-                    <div className="flex items-center"><label className="w-24">Phổ thông</label><input name="economySeats" type="number" value={planeData.economySeats} onChange={handleInputChange} className="flex-1 p-2 border rounded" /></div>
-                    <div className="flex items-center"><label className="w-24">Thương gia</label><input name="businessSeats" type="number" value={planeData.businessSeats} onChange={handleInputChange} className="flex-1 p-2 border rounded" /></div>
+                    {ticketClasses && ticketClasses.length > 0 ? (
+                        ticketClasses.map((tc) => {
+                            const cfg = seatConfigs.find(c => String(c.ticketClassId) === String(tc.id)) || { ticketClassId: tc.id, name: tc.name, prefix: (tc.name || '').charAt(0).toUpperCase(), seatCount: 0 };
+                            return (
+                                <div className="flex items-center gap-2" key={tc.id}>
+                                    <label className="w-32 text-sm font-medium text-gray-700">{tc.name}</label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        value={cfg.seatCount}
+                                        onChange={(e) => handleSeatConfigChange(tc.id, Number(e.target.value))}
+                                        placeholder="Số ghế"
+                                        className="flex-1 p-2 border rounded"
+                                    />
+                                    <span className="text-xs text-gray-500 w-20">Prefix: {cfg.prefix}</span>
+                                </div>
+                            );
+                        })
+                    ) : (
+                        <p className="text-sm text-gray-500 italic">Chưa có hạng vé. Vui lòng tạo hạng vé trong phần Cài đặt.</p>
+                    )}
                 </div>
-                <div className="p-2 border rounded-lg bg-gray-100 flex justify-between items-center"><span className="font-semibold text-gray-600">Tổng số ghế:</span><span className="font-bold text-xl text-blue-600">{totalSeats}</span></div>
+                <div className="p-2 border rounded-lg bg-gray-100 flex justify-between items-center"><span className="font-semibold text-gray-600">Tổng số ghế:</span><span className="font-bold text-xl text-blue-600">{computedTotalSeats}</span></div>
                 <div className="flex gap-4"><button onClick={handleSubmit} className="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Lưu</button><button onClick={onCancel} className="w-full bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Hủy</button></div>
             </div>
             
             <div className="lg:col-span-2 p-4 border rounded-lg bg-white">
                 <div className="grid grid-cols-6 gap-2">
-                    {Array.from({ length: parseInt(planeData.businessSeats)||0 }, (_, i) => (<div key={`b-${i}`} className="w-10 h-10 bg-teal-200 rounded flex items-center justify-center text-teal-800 text-xs font-semibold">{`B${i + 1}`}</div>))}
-                    {Array.from({ length: parseInt(planeData.economySeats)||0 }, (_, i) => (<div key={`e-${i}`} className="w-10 h-10 bg-cyan-200 rounded flex items-center justify-center text-cyan-800 text-xs">{`E${i + 1}`}</div>))}
+                    {seatConfigs.map((cfg) => 
+                        Array.from({ length: parseInt(cfg.seatCount) || 0 }, (_, i) => {
+                            const seatId = `${cfg.prefix}${i + 1}`;
+                            // Xác định màu dựa trên prefix, không phải index
+                            let bgColor = 'bg-cyan-200 text-cyan-800'; // Default: Phổ thông
+                            if (cfg.prefix.toLowerCase() === 'b') {
+                                bgColor = 'bg-teal-200 text-teal-800'; // Thương gia
+                            } else if (cfg.prefix.toLowerCase() === 'e') {
+                                bgColor = 'bg-cyan-200 text-cyan-800'; // Economy/Phổ thông
+                            }
+                            // Tất cả prefix khác sẽ dùng cyan (phổ thông)
+                            return (
+                                <div key={seatId} className={`w-10 h-10 ${bgColor} rounded flex items-center justify-center text-xs font-semibold`}>
+                                    {seatId}
+                                </div>
+                            );
+                        })
+                    )}
                 </div>
             </div>
         </div>
@@ -107,7 +232,7 @@ const AirplanesList = ({ airplanes, onEdit, onCreate, onDelete, canManage }) => 
     );
 };
 
-const AirplanesTab = ({ airplanes: propAirplanes, onUpdateAirplanes }) => { 
+const AirplanesTab = ({ airplanes: propAirplanes, onUpdateAirplanes, ticketClasses }) => { 
     const [airplanes, setAirplanes] = useState(propAirplanes || []);
     const [subTab, setSubTab] = useState('list');
     const [editingAirplane, setEditingAirplane] = useState(null);
@@ -125,11 +250,16 @@ const AirplanesTab = ({ airplanes: propAirplanes, onUpdateAirplanes }) => {
 
     const handleSave = async (planeData) => {
         try {
+            const seatConfigs = Array.isArray(planeData.seatConfigs) ? planeData.seatConfigs.map(cfg => ({
+                ...cfg,
+                seatCount: Number(cfg.seatCount) || 0,
+                prefix: (cfg.prefix || cfg.name?.[0] || 'X').toString().toUpperCase()
+            })) : [];
+
             const payload = {
                 name: planeData.name,
                 code: planeData.code,
-                economySeats: Number(planeData.economySeats),
-                businessSeats: Number(planeData.businessSeats)
+                seatConfigs,
             };
 
             if (editingAirplane) {
@@ -141,7 +271,8 @@ const AirplanesTab = ({ airplanes: propAirplanes, onUpdateAirplanes }) => {
                     code: res.data.code,
                     totalSeats: res.data.totalSeats,
                     businessSeats: res.data.businessSeats,
-                    economySeats: res.data.economySeats
+                    economySeats: res.data.economySeats,
+                    seatConfigs: res.data.seatConfigs,
                 } : a);
                 setAirplanes(updatedAirplanes);
                 onUpdateAirplanes(updatedAirplanes);
@@ -155,7 +286,8 @@ const AirplanesTab = ({ airplanes: propAirplanes, onUpdateAirplanes }) => {
                     code: res.data.code,
                     totalSeats: res.data.totalSeats,
                     businessSeats: res.data.businessSeats,
-                    economySeats: res.data.economySeats
+                    economySeats: res.data.economySeats,
+                    seatConfigs: res.data.seatConfigs,
                 };
                 const updatedAirplanes = [...airplanes, newPlane];
                 setAirplanes(updatedAirplanes);
@@ -186,7 +318,18 @@ const AirplanesTab = ({ airplanes: propAirplanes, onUpdateAirplanes }) => {
 
     const cancelDelete = () => setAirplaneToDelete(null);
     const handleCreateClick = () => { setEditingAirplane(null); setSubTab('create'); }
-    const handleEditClick = (plane) => { setEditingAirplane(plane); setSubTab('edit'); }
+    const handleEditClick = (plane) => { 
+        // Đảm bảo plane có seatConfigs (fallback nếu không có)
+        const planeWithConfigs = {
+            ...plane,
+            seatConfigs: plane.seatConfigs || [
+                { ticketClassId: 0, name: 'Phổ thông', prefix: 'E', seatCount: plane.economySeats || 0 },
+                { ticketClassId: 1, name: 'Thương gia', prefix: 'B', seatCount: plane.businessSeats || 0 },
+            ]
+        };
+        setEditingAirplane(planeWithConfigs); 
+        setSubTab('edit'); 
+    }
     const handleCancel = () => { setEditingAirplane(null); setSubTab('list'); }
     
     const SubTabButton = ({ value, children }) => ( <button onClick={() => { setSubTab(value); setEditingAirplane(null); }} className={`px-6 py-2 rounded-full text-sm font-semibold ${subTab === value && !editingAirplane ? 'bg-blue-600 text-white shadow' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>{children}</button> );
@@ -198,9 +341,9 @@ const AirplanesTab = ({ airplanes: propAirplanes, onUpdateAirplanes }) => {
             
             // 👇 Chặn truy cập Form nếu không có quyền
             case 'create': 
-                return canManage ? <AirplaneForm initialData={editingAirplane} onSubmit={handleSave} onCancel={handleCancel} /> : <div className="p-6 text-red-500">Bạn không có quyền thêm mới.</div>;
+                return canManage ? <AirplaneForm initialData={editingAirplane} onSubmit={handleSave} onCancel={handleCancel} ticketClasses={ticketClasses} /> : <div className="p-6 text-red-500">Bạn không có quyền thêm mới.</div>;
             case 'edit': 
-                return canManage ? <AirplaneForm initialData={editingAirplane} onSubmit={handleSave} onCancel={handleCancel} /> : <div className="p-6 text-red-500">Bạn không có quyền chỉnh sửa.</div>;
+                return canManage ? <AirplaneForm initialData={editingAirplane} onSubmit={handleSave} onCancel={handleCancel} ticketClasses={ticketClasses} /> : <div className="p-6 text-red-500">Bạn không có quyền chỉnh sửa.</div>;
             default: return null;
         }
     }

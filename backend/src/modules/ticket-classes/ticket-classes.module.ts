@@ -3,9 +3,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { TicketClass } from './entities/ticket-class.entity';
 import { TicketClassesService } from './ticket-classes.service';
 import { TicketClassesController } from './ticket-classes.controller';
+import { FlightTicketClass } from '../flight-ticket-classes/entities/flight-ticket-class.entity';
+import { Seat } from '../seats/entities/seat.entity';
+import { Flight } from '../flights/entities/flight.entity';
+import { Airplane } from '../airplanes/entities/airplane.entity';
+import { Ticket } from '../tickets/entities/ticket.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([TicketClass])],
+  imports: [TypeOrmModule.forFeature([TicketClass, FlightTicketClass, Seat, Flight, Airplane, Ticket])],
   controllers: [TicketClassesController],
   providers: [TicketClassesService],
   exports: [TicketClassesService],

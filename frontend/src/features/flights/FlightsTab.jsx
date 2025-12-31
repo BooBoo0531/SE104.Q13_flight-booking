@@ -208,7 +208,7 @@ const FlightForm = ({ initialData, onSubmit, onCancel, airports, airplanes, rule
     const isEditMode = !!initialData;
     console.log('FlightForm initialData:', initialData);
     console.log('intermediateAirports from initialData:', initialData?.intermediateAirports);
-    const [flightData, setFlightData] = useState(isEditMode ? initialData : { fromAirport: '', fromCity: '', toAirport: '', toCity: '', planeId: '', date: '', hour: '', minute: '', duration: '', price: '', businessSeats: 0, economySeats: 0, seatsTaken: 0, });
+    const [flightData, setFlightData] = useState(isEditMode ? initialData : { fromAirport: '', fromCity: '', toAirport: '', toCity: '', planeId: '', date: '', hour: '', minute: '', duration: '', price: '', businessSeats: 0, economySeats: 0, seatsTaken: 0, seatConfigs: [] });
     const [intermediateAirports, setIntermediateAirports] = useState(isEditMode ? (initialData.intermediateAirports || []) : []);
     
     // Đồng bộ state khi initialData thay đổi
@@ -226,6 +226,7 @@ const FlightForm = ({ initialData, onSubmit, onCancel, airports, airplanes, rule
         let toCity = flightData.toCity;
         let businessSeats = flightData.businessSeats;
         let economySeats = flightData.economySeats;
+        let seatConfigs = flightData.seatConfigs || [];
         
         if(name === 'fromAirport') { fromCity = airports.find(a => a.name === value)?.city || ''; }
         if(name === 'toAirport') { toCity = airports.find(a => a.name === value)?.city || ''; }
@@ -234,9 +235,10 @@ const FlightForm = ({ initialData, onSubmit, onCancel, airports, airplanes, rule
             if(selectedPlane) {
                 businessSeats = selectedPlane.businessSeats;
                 economySeats = selectedPlane.economySeats;
+                seatConfigs = selectedPlane.seatConfigs || [];
             }
         }
-        setFlightData(prev => ({ ...prev, [name]: value, fromCity, toCity, businessSeats, economySeats })); 
+        setFlightData(prev => ({ ...prev, [name]: value, fromCity, toCity, businessSeats, economySeats, seatConfigs })); 
     };
 
     const handleAddAirport = () => { 
@@ -302,8 +304,19 @@ const FlightForm = ({ initialData, onSubmit, onCancel, airports, airplanes, rule
             </div>
             <div className="space-y-4">
                 <div className="p-4 border rounded-lg space-y-2 bg-white"><h3 className="font-semibold text-gray-700">Số lượng ghế (lấy từ máy bay)</h3>
-                    <div className="flex items-center"><label className="w-24">Thương gia</label><input name="businessSeats" type="number" value={flightData.businessSeats} readOnly className="flex-1 p-2 border rounded bg-gray-100" /></div>
-                    <div className="flex items-center"><label className="w-24">Phổ thông</label><input name="economySeats" type="number" value={flightData.economySeats} readOnly className="flex-1 p-2 border rounded bg-gray-100" /></div>
+                    {(flightData.seatConfigs && flightData.seatConfigs.length > 0) ? (
+                        flightData.seatConfigs
+                            .filter(cfg => (cfg.seatCount || 0) > 0)
+                            .map(cfg => (
+                                <div className="flex items-center" key={`${cfg.prefix}-${cfg.ticketClassId}`}>
+                                    <label className="w-40 text-sm font-medium text-gray-700">{cfg.name || cfg.prefix}</label>
+                                    <input type="number" readOnly value={cfg.seatCount} className="flex-1 p-2 border rounded bg-gray-100" />
+                                    <span className="ml-3 text-xs text-gray-500">Prefix: {cfg.prefix}</span>
+                                </div>
+                            ))
+                    ) : (
+                        <p className="text-sm text-gray-500">Chọn máy bay để xem cấu hình ghế.</p>
+                    )}
                 </div>
                 <div className="p-4 border border-gray-200 rounded-lg space-y-3 bg-white shadow-sm">
                     <div className="flex justify-between items-center pb-2 border-b border-gray-100">

@@ -111,20 +111,35 @@ let TicketsService = class TicketsService {
         return count > 0;
     }
     validateSeatExistence(seatCode, plane) {
-        const match = seatCode.match(/^([BE])(\d+)$/);
+        const match = seatCode.match(/^([A-Z]{1,3})(\d+)$/i);
         if (!match)
             throw new common_1.BadRequestException(`Mã ghế không hợp lệ (VD: B1, E10). Nhận được: ${seatCode}`);
-        const type = match[1];
+        const prefix = match[1].toUpperCase();
         const num = parseInt(match[2], 10);
-        if (type === 'B') {
+        const seatConfigs = Array.isArray(plane?.seatConfigs) ? plane.seatConfigs : [];
+        if (seatConfigs.length > 0) {
+            const cfg = seatConfigs.find((c) => (c.prefix || '').toUpperCase() === prefix);
+            if (!cfg) {
+                throw new common_1.NotFoundException(`Máy bay không có cấu hình ghế với tiền tố ${prefix}.`);
+            }
+            const maxSeat = Number(cfg.seatCount) || 0;
+            if (num < 1 || num > maxSeat) {
+                throw new common_1.NotFoundException(`Máy bay chỉ có ${maxSeat} ghế cho hạng ${cfg.name || prefix} (bạn chọn ${seatCode}).`);
+            }
+            return;
+        }
+        if (prefix === 'B') {
             if (num > plane.businessSeats) {
                 throw new common_1.NotFoundException(`Máy bay chỉ có ${plane.businessSeats} ghế thương gia (bạn chọn ${seatCode}).`);
             }
         }
-        else if (type === 'E') {
+        else if (prefix === 'E') {
             if (num > plane.economySeats) {
                 throw new common_1.NotFoundException(`Máy bay chỉ có ${plane.economySeats} ghế phổ thông (bạn chọn ${seatCode}).`);
             }
+        }
+        else {
+            throw new common_1.NotFoundException(`Máy bay không hỗ trợ hạng ghế với tiền tố ${prefix}.`);
         }
     }
     async create(dto) {
